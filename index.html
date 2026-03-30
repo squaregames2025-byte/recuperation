@@ -64,13 +64,14 @@ button:disabled { background: #444; }
 </div>
 
 <script>
+// Récupération des paramètres URL
 const params = new URLSearchParams(window.location.search);
 
-// On supporte tous les formats PlayFab
+// Support de tous les formats PlayFab
 const token = params.get("token") || params.get("t") || params.get("PasswordResetToken");
 const email = params.get("email") || params.get("e");
 
-// DEBUG
+// Affichage debug pour vérifier
 document.getElementById("debug").innerHTML = "Token: " + (token || "NULL") + "<br>Email: " + (email || "NULL");
 
 async function send() {
