@@ -66,7 +66,7 @@ button {
   <input type="password" id="p1" placeholder="New password (min 6)">
   <input type="password" id="p2" placeholder="Confirm password">
 
-  <button onclick="resetPassword()">RESET</button>
+  <button onclick="resetPassword()">RESET PASSWORD</button>
 
   <div id="status"></div>
 </div>
@@ -81,24 +81,27 @@ async function resetPassword() {
   const p2 = document.getElementById("p2").value;
   const status = document.getElementById("status");
 
+  // Vérif token
   if (!token) {
-    status.innerText = "Invalid or missing token.";
+    status.innerText = "❌ Invalid or missing token.";
     return;
   }
 
+  // Vérif mot de passe
   if (p1.length < 6) {
-    status.innerText = "Password must be at least 6 characters.";
+    status.innerText = "❌ Password must be at least 6 characters.";
     return;
   }
 
   if (p1 !== p2) {
-    status.innerText = "Passwords do not match.";
+    status.innerText = "❌ Passwords do not match.";
     return;
   }
 
-  status.innerText = "Processing...";
+  status.innerText = "⏳ Processing...";
 
   try {
+
     const response = await fetch("https://YOUR_TITLE_ID.playfabapi.com/Client/ResetPassword", {
       method: "POST",
       headers: {
@@ -114,11 +117,17 @@ async function resetPassword() {
 
     if (data.code === 200) {
       status.innerText = "✅ Password successfully reset!";
+
+      // OPTION BONUS : redirection après succès
+      setTimeout(() => {
+        window.location.href = "https://google.com"; // change si tu veux
+      }, 2000);
+
     } else {
-      status.innerText = "❌ Error: " + data.errorMessage;
+      status.innerText = "❌ " + data.errorMessage;
     }
 
-  } catch (err) {
+  } catch (error) {
     status.innerText = "❌ Network error.";
   }
 }
