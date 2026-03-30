@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Lost Beacon - Réinitialisation du mot de passe</title>
+    <style>
+        /* Design immersif inspiré de The Lost Beacon */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #050505; 
+            color: #ffffff; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+            background-image: radial-gradient(circle, #1a1a1a 0%, #050505 100%);
+        }
+        .card { 
+            background: rgba(20, 20, 20, 0.95); 
+            border: 2px solid #ffaa00; 
+            border-radius: 15px; 
+            padding: 40px; 
+            max-width: 400px; 
+            width: 90%; 
+            box-shadow: 0 0 50px rgba(255, 170, 0, 0.15); 
+            text-align: center; 
+        }
+        h2 { color: #ffaa00; text-transform: uppercase; margin-bottom: 30px; letter-spacing: 3px; font-weight: 300; }
+        .user-greeting { font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #fff; }
+        p { font-size: 14px; color: #888; margin-bottom: 20px; }
+        
+        input { 
+            padding: 14px; 
+            width: 100%; 
+            box-sizing: border-box; 
+            margin: 10px 0; 
+            border-radius: 6px; 
+            border: 1px solid #333; 
+            background: #000; 
+            color: #fff; 
+            font-size: 16px; 
+            outline: none;
+            transition: border 0.3s;
+        }
+        input:focus { border-color: #ffaa00; }
+
+        button { 
+            padding: 16px; 
+            background: linear-gradient(135deg, #ffaa00 0%, #cc8800 100%); 
+            border: none; 
+            cursor: pointer; 
+            color: #000; 
+            font-weight: bold; 
+            border-radius: 6px; 
+            margin-top: 20px; 
+            width: 100%; 
+            text-transform: uppercase; 
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+        button:hover { filter: brightness(1.2); transform: translateY(-2px); }
+        button:disabled { background: #444; cursor: not-allowed; transform: none; }
+        
+        #status { margin-top: 25px; font-weight: bold; font-size: 15px; min-height: 20px; }
+        #form-area { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>The Lost Beacon</h2>
+        
+        <!-- Salutation personnalisée -->
+        <div id="greeting" class="user-greeting">Chargement...</div>
+
+        <div id="form-area">
+            <p>Veuillez définir votre nouveau mot de passe sécurisé (6 caractères minimum).</p>
+            <input type="password" id="pass1" placeholder="Nouveau mot de passe">
+            <input type="password" id="pass2" placeholder="Confirmez le mot de passe">
+            <button id="btn-submit" onclick="submitNewPassword()">Mettre à jour mon profil</button>
+        </div>
+
+        <div id="status"></div>
+    </div>
+
+    <script>
+        // Ta configuration PlayFab
+        const TITLE_ID = "104EA2";
+        let TOKEN = null;
+
+        // 1. Initialisation au chargement de la page
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const username = urlParams.get('u');
+            TOKEN = urlParams.get('token');
+
+            // Affichage du pseudo (ex: Bonjour lupin2 !)
+            if (username) {
+                document.getElementById("greeting").innerHTML = "Bonjour " + decodeURIComponent(username) + " !";
+            } else {
+                document.getElementById("greeting").innerHTML = "Bonjour !";
+            }
+
+            // Vérification de la présence du Token
+            if (TOKEN && TOKEN.length > 5) {
+                document.getElementById("form-area").style.display = "block";
+            } else {
+                showStatus("❌ Le lien est invalide ou a expiré.<br>Veuillez refaire une demande depuis le jeu.", "#ff4444");
+            }
+        };
+
+        // 2. Envoi des données vers PlayFab
+        async function submitNewPassword() {
+            const p1 = document.getElementById("pass1").value;
+            const p2 = document.getElementById("pass2").value;
+            const btn = document.getElementById("btn-submit");
+
+            // Validation locale
+            if (p1.length < 6) {
+                showStatus("❌ Le mot de passe doit faire au moins 6 caractères.", "#ffaa00");
+                return;
+            }
+            if (p1 !== p2) {
+                showStatus("❌ Les mots de passe ne sont pas identiques.", "#ff4444");
+                return;
+            }
+
+            // Préparation de l'envoi
+            btn.disabled = true;
+            showStatus("🔄 Connexion aux serveurs PlayFab...", "cyan");
+
+            try {
+                // Appel direct à l'API PlayFab via fetch
+                const response = await fetch(`https://${TITLE_ID.toLowerCase()}.playfabapi.com/Client/ResetPassword`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        TitleId: TITLE_ID,
+                        Token: TOKEN,
+                        Password: p1
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.code === 200) {
+                    // SUCCÈS
+                    document.getElementById("form-area").style.display = "none";
+                    showStatus("✅ SUCCÈS !<br>Votre mot de passe a été modifié.<br>Vous pouvez fermer cette page et retourner au jeu.", "#00ff00");
+                } else {
+                    // ERREUR SERVEUR (Token expiré, etc)
+                    const errorMsg = data.errorMessage || "Une erreur est survenue.";
+                    showStatus("❌ Erreur : " + errorMsg, "#ff4444");
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                // ERREUR RÉSEAU
+                showStatus("❌ Erreur de connexion aux serveurs de jeu.", "#ff4444");
+                btn.disabled = false;
+            }
+        }
+
+        function showStatus(msg, color) {
+            const div = document.getElementById("status");
+            div.innerHTML = msg;
+            div.style.color = color;
+        }
+    </script>
+</body>
+</html>
