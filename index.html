@@ -2,104 +2,64 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Lost Beacon - Password Reset</title>
+    <title>The Lost Beacon - Reset</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #050505; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: rgba(20, 20, 20, 0.98); padding: 40px; border-radius: 15px; border: 2px solid #ffaa00; max-width: 380px; width: 90%; text-align: center; box-shadow: 0 0 50px #000; }
-        h2 { color: #ffaa00; text-transform: uppercase; letter-spacing: 2px; margin-top: 0; }
-        .greeting { font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #fff; }
-        input { padding: 14px; margin: 10px 0; width: 100%; box-sizing: border-box; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; font-size: 16px; outline: none; }
-        input:focus { border-color: #ffaa00; }
-        button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; cursor: pointer; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 15px; transition: 0.3s; text-transform: uppercase; }
-        button:hover { background: #ffcc00; transform: scale(1.02); }
-        button:disabled { background: #444; cursor: not-allowed; transform: none; }
-        #status { margin-top: 25px; font-weight: bold; font-size: 15px; line-height: 1.5; }
+        body { font-family: sans-serif; background: #050505; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #111; border: 2px solid #ffaa00; border-radius: 12px; padding: 40px; max-width: 400px; width: 90%; text-align: center; }
+        h2 { color: #ffaa00; text-transform: uppercase; margin-top: 0; }
+        input { padding: 14px; width: 100%; box-sizing: border-box; margin: 10px 0; border-radius: 6px; border: 1px solid #333; background: #000; color: #fff; font-size: 16px; outline: none; }
+        button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 8px; margin-top: 15px; cursor: pointer; }
+        #status { margin-top: 25px; font-weight: bold; font-size: 14px; white-space: pre-wrap; }
     </style>
 </head>
 <body>
-
-<div class="card">
-    <h2>The Lost Beacon</h2>
-    <div id="user-display" class="greeting">Bonjour !</div>
-
-    <div id="form-content">
-        <p style="color: #888; font-size: 14px;">Veuillez saisir votre nouveau mot de passe.</p>
-        <input type="password" id="p1" placeholder="Nouveau mot de passe (min 6)">
-        <input type="password" id="p2" placeholder="Confirmez le mot de passe">
-        <button id="btn" onclick="executeReset()">Valider le changement</button>
+    <div class="card">
+        <h2>The Lost Beacon</h2>
+        <div id="greeting" style="font-size: 20px; margin-bottom: 20px;">Bonjour !</div>
+        <input type="password" id="p1" placeholder="Nouveau mot de passe">
+        <input type="password" id="p2" placeholder="Confirmer le mot de passe">
+        <button id="btn" onclick="send()">MODIFIER MON MOT DE PASSE</button>
+        <div id="status"></div>
     </div>
 
-    <div id="status"></div>
-</div>
-
 <script>
-const TID = "104EA2";
-
-// 1. Détection du pseudo et du token au chargement
-window.onload = function() {
-    const params = new URLSearchParams(window.location.search);
-    const user = params.get("u");
-    const token = params.get("token");
-
-    if (user) {
-        document.getElementById("user-display").innerHTML = "Bonjour " + decodeURIComponent(user) + " !";
-    }
-
-    if (!token || token.length < 10) {
-        document.getElementById("form-content").style.display = "none";
-        document.getElementById("status").innerHTML = "❌ Lien de sécurité invalide.<br>Veuillez refaire une demande en jeu.";
-        document.getElementById("status").style.color = "#f87171";
-    }
-};
-
-// 2. Envoi des données (Version native sans SDK pour éviter les blocages)
-async function executeReset() {
+async function send() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
-    const pass1 = document.getElementById("p1").value;
-    const pass2 = document.getElementById("p2").value;
-    const btn = document.getElementById("btn");
+    const u = params.get("u");
+    const p1 = document.getElementById("p1").value;
+    const p2 = document.getElementById("p2").value;
     const status = document.getElementById("status");
 
-    if (pass1.length < 6 || pass1 !== pass2) {
-        status.innerHTML = "❌ Mots de passe non valides ou différents.";
-        status.style.color = "#fbbf24";
-        return;
-    }
+    if (u) document.getElementById("greeting").innerHTML = "Bonjour " + decodeURIComponent(u) + " !";
+    if (p1 !== p2 || p1.length < 6) { status.innerHTML = "❌ Erreur de saisie."; return; }
 
-    btn.disabled = true;
-    status.innerHTML = "⏳ Connexion aux serveurs de jeu...";
-    status.style.color = "cyan";
-
+    status.innerHTML = "⏳ Envoi...";
+    
     try {
-        const response = await fetch(`https://${TID.toLowerCase()}.playfabapi.com/Client/ResetPassword`, {
+        // ON UTILISE LE TITLE ID EN MAJUSCULES DANS L'URL
+        const url = "https://104EA2.playfabapi.com/Client/ResetPassword";
+        
+        const response = await fetch(url, {
             method: 'POST',
-            mode: 'cors', // Force le mode CORS pour passer les navigateurs
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                TitleId: TID,
-                Token: token,
-                Password: pass1
-            })
+            body: JSON.stringify({ TitleId: "104EA2", Token: token, Password: p1 })
         });
 
         const data = await response.json();
 
         if (response.ok && data.code === 200) {
-            document.getElementById("form-content").style.display = "none";
-            status.innerHTML = "✅ SUCCÈS !<br>Votre mot de passe a été modifié.<br>Vous pouvez retourner au jeu.";
-            status.style.color = "#4ade80";
+            status.innerHTML = "✅ SUCCÈS ! Mot de passe modifié.";
+            status.style.color = "#00ff00";
         } else {
-            status.innerHTML = "❌ ÉCHEC : " + (data.errorMessage || "Lien expiré.");
-            status.style.color = "#f87171";
-            btn.disabled = false;
+            // AFFICHE L'ERREUR RÉELLE DU SERVEUR
+            status.innerHTML = "❌ ERREUR SERVEUR : " + (data.errorMessage || "Lien expiré");
+            status.style.color = "red";
         }
     } catch (err) {
-        // ICI C'EST LE BLOCAGE DU NAVIGATEUR
-        status.innerHTML = "❌ Blocage de sécurité détecté.<br>Action : Ouvrez ce lien dans une <b>Fenêtre de Navigation Privée</b>.";
-        status.style.color = "#f87171";
-        btn.disabled = false;
+        // AFFICHE L'ERREUR RÉELLE DU NAVIGATEUR
+        status.innerHTML = "❌ ERREUR TECHNIQUE : " + err.message;
+        status.style.color = "orange";
     }
 }
 </script>
