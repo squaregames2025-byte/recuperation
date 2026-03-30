@@ -5,41 +5,33 @@
     <title>The Lost Beacon - Reset</title>
     <style>
         body { font-family: sans-serif; background: #000; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #111; border: 2px solid #ffaa00; border-radius: 12px; padding: 40px; max-width: 400px; width: 90%; text-align: center; }
-        h2 { color: #ffaa00; text-transform: uppercase; margin-bottom: 20px; }
-        input { padding: 14px; width: 100%; box-sizing: border-box; margin: 10px 0; border-radius: 6px; border: 1px solid #333; background: #000; color: #fff; font-size: 16px; outline: none; }
-        button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 8px; margin-top: 15px; cursor: pointer; width: 100%; }
+        .card { background: #111; border: 2px solid #ffaa00; border-radius: 12px; padding: 40px; max-width: 380px; width: 90%; text-align: center; }
+        h2 { color: #ffaa00; text-transform: uppercase; }
+        input { padding: 12px; width: 100%; box-sizing: border-box; margin: 10px 0; border-radius: 6px; border: 1px solid #333; background: #000; color: #fff; font-size: 16px; }
+        button { padding: 15px; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 6px; margin-top: 15px; cursor: pointer; width: 100%; }
         #status { margin-top: 25px; font-weight: bold; font-size: 14px; }
     </style>
 </head>
 <body>
     <div class="card">
         <h2>The Lost Beacon</h2>
-        <div id="greeting" style="font-size: 20px; margin-bottom: 20px;">Bonjour !</div>
-        <div id="form-ui">
-            <input type="password" id="p1" placeholder="Nouveau mot de passe">
-            <input type="password" id="p2" placeholder="Confirmer le mot de passe">
-            <button onclick="envoi()">CHANGER LE MOT DE PASSE</button>
-        </div>
+        <p>Entrez votre nouveau mot de passe :</p>
+        <input type="password" id="p1" placeholder="Mot de passe (min 6)">
+        <input type="password" id="p2" placeholder="Confirmer le mot de passe">
+        <button id="btn" onclick="send()">VALIDER</button>
         <div id="status"></div>
     </div>
 
 <script>
-    const TID = "104EA2";
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-    const user = params.get("u");
-
-    // Affiche le nom s'il est là
-    if (user) document.getElementById("greeting").innerText = "Bonjour " + decodeURIComponent(user) + " !";
-
-    async function envoi() {
+    async function send() {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get("token"); // Récupère le token ajouté par PlayFab
         const p1 = document.getElementById("p1").value;
         const p2 = document.getElementById("p2").value;
         const status = document.getElementById("status");
 
-        if (!token) { alert("ERREUR : Token absent. Utilisez le lien du mail."); return; }
-        if (p1 !== p2 || p1.length < 6) { alert("Vérifiez vos mots de passe (6 car. min)."); return; }
+        if (!token) { alert("Erreur : Le lien est incomplet. Token absent."); return; }
+        if (p1 !== p2 || p1.length < 6) { alert("Vérifiez vos mots de passe."); return; }
 
         status.innerHTML = "⏳ Connexion à PlayFab...";
 
@@ -47,21 +39,21 @@
             const response = await fetch("https://104EA2.playfabapi.com/Client/ResetPassword", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ TitleId: TID, Token: token, Password: p1 })
+                body: JSON.stringify({ TitleId: "104EA2", Token: token, Password: p1 })
             });
 
             const data = await response.json();
 
             if (data.code === 200) {
-                document.getElementById("form-ui").style.display = "none";
-                status.innerHTML = "✅ SUCCÈS ! Mot de passe modifié.";
+                status.innerHTML = "✅ SUCCÈS ! Mot de passe modifié.<br>Retournez au jeu.";
                 status.style.color = "#00ff00";
+                document.getElementById("btn").style.display = "none";
             } else {
                 status.innerHTML = "❌ ERREUR : " + (data.errorMessage || "Lien expiré");
                 status.style.color = "red";
             }
         } catch (e) {
-            status.innerHTML = "❌ ERREUR RÉSEAU. Vérifiez votre AdBlock.";
+            status.innerHTML = "❌ ERREUR RÉSEAU.";
         }
     }
 </script>
