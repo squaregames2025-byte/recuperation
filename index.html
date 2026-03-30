@@ -2,80 +2,81 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>The Lost Beacon - Final Fix</title>
+    <title>The Lost Beacon - Password Recovery</title>
     <style>
-        body { font-family: sans-serif; background: #050505; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #111; border: 2px solid #ffaa00; border-radius: 12px; padding: 40px; max-width: 400px; width: 90%; text-align: center; }
-        h2 { color: #ffaa00; text-transform: uppercase; margin-bottom: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #050505; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #111; border: 2px solid #ffaa00; border-radius: 12px; padding: 40px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 0 40px #000; }
+        h2 { color: #ffaa00; text-transform: uppercase; margin-bottom: 25px; letter-spacing: 2px; }
         input { padding: 14px; width: 100%; box-sizing: border-box; margin: 10px 0; border-radius: 6px; border: 1px solid #333; background: #000; color: #fff; font-size: 16px; outline: none; }
-        button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 8px; cursor: pointer; }
+        button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 8px; margin-top: 15px; cursor: pointer; text-transform: uppercase; }
         #status { margin-top: 25px; font-weight: bold; font-size: 14px; }
-        #debug-log { margin-top: 20px; padding: 10px; background: #000; color: #666; font-family: monospace; font-size: 10px; text-align: left; border: 1px solid #222; }
+        #log { margin-top: 20px; padding: 10px; background: #080808; color: #444; font-family: monospace; font-size: 10px; text-align: left; border: 1px solid #222; }
     </style>
 </head>
 <body>
     <div class="card">
         <h2>The Lost Beacon</h2>
-        <div id="greeting" style="margin-bottom:15px;">Bonjour !</div>
+        <div id="greet" style="font-size: 18px; margin-bottom: 15px;">Bonjour !</div>
         <input type="password" id="p1" placeholder="Nouveau mot de passe">
-        <input type="password" id="p2" placeholder="Confirmer">
-        <button onclick="sendRequest()">VALIDER</button>
+        <input type="password" id="p2" placeholder="Confirmer le mot de passe">
+        <button onclick="apply()">CHANGER MON MOT DE PASSE</button>
         <div id="status"></div>
-        <div id="debug-log">Logs de connexion :<br></div>
+        <div id="log">Console :<br></div>
     </div>
 
 <script>
-const TID = "104EA2";
+const TITLE_ID = "104EA2"; // MAJUSCULES OBLIGATOIRES
 
-function addLog(m) { document.getElementById("debug-log").innerHTML += "> " + m + "<br>"; }
+function addLog(m) { document.getElementById("log").innerHTML += "> " + m + "<br>"; }
 
-async function sendRequest() {
+function apply() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
     const u = params.get("u");
     const p1 = document.getElementById("p1").value;
+    const p2 = document.getElementById("p2").value;
     const status = document.getElementById("status");
 
-    if (u) document.getElementById("greeting").innerHTML = "Bonjour " + decodeURIComponent(u) + " !";
-    if (p1.length < 6) { status.innerHTML = "❌ Trop court."; return; }
+    if (u) document.getElementById("greet").innerHTML = "Bonjour " + decodeURIComponent(u) + " !";
+    if (p1 !== p2 || p1.length < 6) { status.innerHTML = "❌ Erreur de saisie."; return; }
 
-    status.innerHTML = "⏳ Envoi au serveur...";
-    addLog("Début de la requête...");
+    status.innerHTML = "⏳ Connexion au serveur...";
+    addLog("Tentative d'envoi...");
 
-    try {
-        // ON FORCE L'ID EN MINUSCULES DANS L'URL (Standard PlayFab)
-        const url = `https://${TID.toLowerCase()}.playfabapi.com/Client/ResetPassword`;
-        addLog("URL cible : " + url);
+    // ON FORCE LE TITLE ID EN MAJUSCULES DANS L'URL
+    const url = "https://" + TITLE_ID + ".playfabapi.com/Client/ResetPassword";
+    addLog("URL : " + url);
 
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ TitleId: TID, Token: token, Password: p1 })
-        });
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url, true);
+    xhr.setRequestHeader("Content-Type", "application/json");
 
-        addLog("Statut HTTP : " + response.status);
-
-        // On vérifie d'abord si la réponse a du contenu
-        const text = await response.text();
-        if (!text) {
-            addLog("ERREUR : Le serveur a renvoyé une réponse vide.");
-            status.innerHTML = "❌ Le serveur ne répond pas. Réessayez.";
-            return;
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+            addLog("Réponse reçue. HTTP Code : " + xhr.status);
+            try {
+                const res = JSON.parse(xhr.responseText);
+                if (xhr.status === 200 && res.code === 200) {
+                    status.innerHTML = "✅ SUCCÈS ! Mot de passe modifié.";
+                    status.style.color = "#00ff00";
+                    addLog("Opération réussie.");
+                } else {
+                    status.innerHTML = "❌ ERREUR : " + (res.errorMessage || "Lien expiré");
+                    addLog("Détail PlayFab : " + res.error);
+                }
+            } catch(e) {
+                status.innerHTML = "❌ Erreur de lecture serveur.";
+                addLog("Réponse brute : " + xhr.responseText.substring(0, 50));
+            }
         }
+    };
 
-        const data = JSON.parse(text);
+    xhr.onerror = function() {
+        status.innerHTML = "❌ Blocage réseau navigateur.";
+        addLog("ERREUR : La connexion a été coupée par Edge.");
+    };
 
-        if (response.ok && data.code === 200) {
-            status.innerHTML = "✅ SUCCÈS ! Mot de passe modifié.";
-            status.style.color = "#00ff00";
-        } else {
-            status.innerHTML = "❌ ERREUR SERVEUR : " + (data.errorMessage || "Lien invalide");
-            addLog("Détail : " + (data.errorMessage || "Inconnu"));
-        }
-    } catch (err) {
-        status.innerHTML = "❌ ERREUR TECHNIQUE : " + err.message;
-        addLog("Erreur : " + err.message);
-    }
+    xhr.send(JSON.stringify({ TitleId: TITLE_ID, Token: token, Password: p1 }));
 }
 </script>
 </body>
