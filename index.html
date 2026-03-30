@@ -2,71 +2,59 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>The Lost Beacon - Recovery</title>
-    <!-- Chargement du moteur officiel PlayFab -->
+    <title>The Lost Beacon - Reset</title>
     <script src="https://download.playfab.com/PlayFabClientApi.js"></script>
     <style>
-        body { font-family: sans-serif; background: #000; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #111; border: 2px solid #ffaa00; border-radius: 12px; padding: 40px; max-width: 400px; width: 90%; text-align: center; }
-        h2 { color: #ffaa00; text-transform: uppercase; margin: 0 0 20px 0; }
-        input { padding: 14px; width: 100%; box-sizing: border-box; margin: 10px 0; border-radius: 6px; border: 1px solid #444; background: #000; color: #fff; font-size: 16px; outline: none; }
+        body { font-family: sans-serif; background: #050505; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #111; border: 2px solid #ffaa00; border-radius: 12px; padding: 40px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 10px 40px #000; }
+        h2 { color: #ffaa00; text-transform: uppercase; margin-bottom: 20px; }
+        input { padding: 14px; width: 100%; box-sizing: border-box; margin: 10px 0; border-radius: 6px; border: 1px solid #333; background: #000; color: #fff; font-size: 16px; }
         button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 8px; margin-top: 15px; cursor: pointer; }
-        #status { margin-top: 25px; font-weight: bold; font-size: 15px; }
-        #debug { margin-top: 20px; font-size: 10px; color: #444; text-align: left; background: #080808; padding: 5px; border: 1px solid #222; }
+        #status { margin-top: 25px; font-weight: bold; font-size: 14px; line-height: 1.5; }
     </style>
 </head>
 <body>
     <div class="card">
         <h2>The Lost Beacon</h2>
-        <div id="greeting" style="font-size: 20px; margin-bottom: 20px;">Bonjour !</div>
-        <input type="password" id="p1" placeholder="Nouveau mot de passe">
-        <input type="password" id="p2" placeholder="Confirmer le mot de passe">
-        <button id="btn" onclick="reset()">MODIFIER LE MOT DE PASSE</button>
+        <div id="form">
+            <p>Entrez votre nouveau mot de passe (6 car. min) :</p>
+            <input type="password" id="p1" placeholder="Nouveau mot de passe">
+            <input type="password" id="p2" placeholder="Confirmer">
+            <button id="btn" onclick="exec()">VALIDER</button>
+        </div>
         <div id="status"></div>
-        <div id="debug">Logs :<br></div>
     </div>
 
 <script>
-// INITIALISATION
 PlayFab.settings.titleId = "104EA2";
 
-function log(m) { document.getElementById("debug").innerHTML += "> " + m + "<br>"; }
-
-window.onload = function() {
-    const params = new URLSearchParams(window.location.search);
-    const u = params.get("u");
-    if (u) document.getElementById("greeting").innerHTML = "Bonjour " + decodeURIComponent(u) + " !";
-    log("Initialisation OK. TitleId: " + PlayFab.settings.titleId);
-};
-
-function reset() {
+function exec() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
     const p1 = document.getElementById("p1").value;
     const p2 = document.getElementById("p2").value;
-    const status = document.getElementById("status");
     const btn = document.getElementById("btn");
+    const status = document.getElementById("status");
 
-    if (p1 !== p2 || p1.length < 6) { alert("Erreur de saisie."); return; }
+    if (!token) { status.innerHTML = "❌ Token manquant dans l'URL."; return; }
+    if (p1.length < 6 || p1 !== p2) { status.innerHTML = "❌ Vérifiez la saisie."; return; }
 
     btn.disabled = true;
-    status.innerHTML = "⏳ Connexion aux serveurs...";
-    log("Appel de l'API PlayFab...");
+    status.innerHTML = "⏳ Connexion à PlayFab...";
 
-    // ON UTILISE LA FONCTION NATIVE DU SDK (Plus de chance de passer)
+    // UTILISATION DE L'API OFFICIELLE DE LA DOC
     PlayFabClientAPI.ResetPassword({
         Token: token,
         Password: p1
     }, function(result, error) {
         if (result) {
-            status.innerHTML = "✅ SUCCÈS ! Mot de passe modifié.";
+            document.getElementById("form").style.display = "none";
+            status.innerHTML = "✅ SUCCÈS !<br>Mot de passe modifié.<br>Vous pouvez retourner au jeu.";
             status.style.color = "#00ff00";
-            log("Succès reçu.");
         } else {
-            status.innerHTML = "❌ ÉCHEC : " + (error ? error.errorMessage : "Erreur inconnue");
-            status.style.color = "red";
-            log("Erreur : " + (error ? error.error : "Unknown"));
             btn.disabled = false;
+            status.innerHTML = "❌ ERREUR : " + (error ? error.errorMessage : "Lien expiré");
+            status.style.color = "red";
         }
     });
 }
