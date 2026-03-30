@@ -1,88 +1,76 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<title>The Lost Beacon - Password Reset</title>
-<script src="https://download.playfab.com/PlayFabClientApi.js"></script>
-
-<style>
-body { font-family: 'Segoe UI', Arial; text-align: center; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-.card { background: #1e293b; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid #334155; max-width: 350px; width: 90%; }
-h2 { color: #f59e0b; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }
-input { padding: 12px; margin: 10px 0; width: 100%; box-sizing: border-box; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: white; font-size: 16px; }
-button { padding: 14px; width: 100%; background: #22c55e; border: none; color: white; cursor: pointer; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 10px; transition: 0.3s; }
-button:hover { background: #16a34a; }
-#message { margin-top: 20px; font-weight: bold; font-size: 14px; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Lost Beacon - Reset</title>
+    <style>
+        body { font-family: sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #1e293b; padding: 40px; border-radius: 15px; border: 1px solid #ffaa00; max-width: 350px; width: 90%; text-align: center; }
+        h2 { color: #ffaa00; text-transform: uppercase; margin-top: 0; }
+        input { padding: 12px; margin: 10px 0; width: 100%; box-sizing: border-box; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; font-size: 16px; }
+        button { padding: 14px; width: 100%; background: #22c55e; border: none; color: white; cursor: pointer; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 10px; }
+        button:disabled { background: #444; }
+        #message { margin-top: 20px; font-weight: bold; font-size: 14px; }
+    </style>
 </head>
-
 <body>
 
 <div class="card">
-    <h2>The Lost Beacon</h2>
-    <p style="font-size: 14px; color: #94a3b8;">Réinitialisation de mot de passe</p>
+    <h2>THE LOST BEACON</h2>
+    <p>Définissez votre nouveau mot de passe</p>
 
-    <input type="password" id="newPassword" placeholder="Nouveau mot de passe"><br>
-    <input type="password" id="confirmPassword" placeholder="Confirmer le mot de passe"><br>
+    <input type="password" id="p1" placeholder="Nouveau mot de passe">
+    <input type="password" id="p2" placeholder="Confirmer le mot de passe">
 
-    <button onclick="resetPassword()">CHANGER LE MOT DE PASSE</button>
+    <button id="btn" onclick="sendReset()">CHANGER LE MOT DE PASSE</button>
 
     <div id="message"></div>
 </div>
 
 <script>
-// CONFIGURATION
-PlayFab.settings.titleId = "104EA2";
+const TID = "104EA2";
 
-function resetPassword() {
-    // 1. Lire le token dans l'URL
+async function sendReset() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
-    
-    const password = document.getElementById("newPassword").value;
-    const confirm = document.getElementById("confirmPassword").value;
-    const msgEl = document.getElementById("message");
+    const pass1 = document.getElementById("p1").value;
+    const pass2 = document.getElementById("p2").value;
+    const msg = document.getElementById("message");
+    const btn = document.getElementById("btn");
 
-    if (!token) {
-        showMessage("❌ Erreur : Lien invalide ou expiré.", true);
-        return;
-    }
+    if (!token) { msg.innerHTML = "❌ Erreur : Token manquant dans le mail."; msg.style.color = "red"; return; }
+    if (pass1.length < 6) { msg.innerHTML = "❌ Trop court (min 6 car.)."; return; }
+    if (pass1 !== pass2) { msg.innerHTML = "❌ Les mots de passe sont différents."; return; }
 
-    if (password.length < 6) {
-        showMessage("❌ Trop court (min. 6 caractères).", true);
-        return;
-    }
+    btn.disabled = true;
+    msg.innerHTML = "⏳ Connexion en cours...";
+    msg.style.color = "cyan";
 
-    if (password !== confirm) {
-        showMessage("❌ Les mots de passe ne correspondent pas.", true);
-        return;
-    }
+    try {
+        // Envoi direct sans bibliothèque pour éviter les blocages
+        const response = await fetch(`https://${TID.toLowerCase()}.playfabapi.com/Client/ResetPassword`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ TitleId: TID, Token: token, Password: pass1 })
+        });
 
-    showMessage("⏳ Connexion aux serveurs...", false);
+        const data = await response.json();
 
-    // 2. Appel API correct (ResetPassword)
-    PlayFabClientAPI.ResetPassword({
-        Token: token,
-        Password: password,
-        TitleId: PlayFab.settings.titleId
-    },
-    function(result, error) {
-        if (result) {
-            showMessage("✅ Mot de passe modifié ! Retournez au jeu.");
-            // Optionnel : masquer le formulaire après succès
-            document.querySelector('button').style.display = 'none';
+        if (data.code === 200) {
+            msg.innerHTML = "✅ SUCCÈS ! Mot de passe modifié.<br>Vous pouvez retourner au jeu.";
+            msg.style.color = "#4ade80";
+            document.querySelector('.card').style.borderColor = "#22c55e";
         } else {
-            showMessage("❌ Erreur : " + error.errorMessage, true);
+            msg.innerHTML = "❌ ERREUR : " + (data.errorMessage || "Lien expiré");
+            msg.style.color = "#f87171";
+            btn.disabled = false;
         }
-    });
-}
-
-function showMessage(msg, isError = false) {
-    const el = document.getElementById("message");
-    el.innerText = msg;
-    el.style.color = isError ? "#f87171" : "#4ade80";
+    } catch (err) {
+        msg.innerHTML = "❌ Erreur réseau. Vérifiez votre connexion.";
+        btn.disabled = false;
+    }
 }
 </script>
-
 </body>
 </html>
