@@ -29,7 +29,6 @@
         input {
             padding: 12px;
             width: 100%;
-            box-sizing: border-box;
             margin: 10px 0;
             border-radius: 6px;
             border: 1px solid #333;
@@ -47,20 +46,24 @@
             border-radius: 6px;
             width: 100%;
             cursor: pointer;
-            text-transform: uppercase;
         }
 
         button:disabled {
             background: #444;
-            cursor: not-allowed;
         }
 
         #status {
             margin-top: 20px;
             font-weight: bold;
-            font-size: 14px;
             padding: 10px;
             border-radius: 5px;
+        }
+
+        #debug {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #888;
+            word-break: break-all;
         }
     </style>
 </head>
@@ -71,36 +74,42 @@
     <h2 style="color:#ffaa00">THE LOST BEACON</h2>
 
     <div id="ui">
-        <p>Nouveau mot de passe (6 caractères min) :</p>
+        <p>Nouveau mot de passe :</p>
         <input type="password" id="p1" placeholder="Mot de passe">
         <input type="password" id="p2" placeholder="Confirmer">
         <button id="btn" onclick="send()">VALIDER</button>
     </div>
 
     <div id="status"></div>
+    <div id="debug"></div>
 </div>
 
 <script>
-async function send() {
+const params = new URLSearchParams(window.location.search);
+const token = params.get("token");
+const email = params.get("email");
 
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-    const email = params.get("email");
+// 🔍 DEBUG VISUEL
+document.getElementById("debug").innerHTML =
+    "Token: " + (token || "NULL") + "<br>Email: " + (email || "NULL");
+
+async function send() {
 
     const p1 = document.getElementById("p1").value;
     const p2 = document.getElementById("p2").value;
     const btn = document.getElementById("btn");
     const status = document.getElementById("status");
 
-    // Vérifications
+    // Vérif lien
     if (!token || !email) {
         status.style.background = "#7f1d1d";
         status.innerHTML = "❌ Lien invalide ou expiré";
         return;
     }
 
+    // Vérif mdp
     if (p1 !== p2 || p1.length < 6) {
-        alert("Mot de passe invalide");
+        alert("Mot de passe invalide (min 6 caractères)");
         return;
     }
 
@@ -124,13 +133,14 @@ async function send() {
 
         const data = await response.json();
 
+        console.log("PlayFab response:", data);
+
         if (data.code === 200) {
             document.getElementById("ui").style.display = "none";
 
             status.style.background = "#064e3b";
             status.innerHTML = "✅ Mot de passe modifié avec succès !";
 
-            // Redirection (optionnelle)
             setTimeout(() => {
                 window.location.href = "/";
             }, 2500);
@@ -142,8 +152,9 @@ async function send() {
         }
 
     } catch (e) {
+        console.error(e);
         status.style.background = "#7c2d12";
-        status.innerHTML = "❌ Problème réseau. Essayez en 4G.";
+        status.innerHTML = "❌ Problème réseau";
         btn.disabled = false;
     }
 }
