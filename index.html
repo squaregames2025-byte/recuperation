@@ -3,94 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Lost Beacon - Recovery</title>
+    <title>The Lost Beacon - Password Reset</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #1e293b; padding: 40px; border-radius: 15px; border: 2px solid #ffaa00; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
-        h2 { color: #ffaa00; text-transform: uppercase; margin: 0 0 10px 0; }
-        input { padding: 14px; margin: 10px 0; width: 100%; box-sizing: border-box; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; font-size: 16px; outline: none; }
+        body { font-family: 'Segoe UI', sans-serif; background: #050505; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: rgba(20, 20, 20, 0.98); padding: 40px; border-radius: 15px; border: 2px solid #ffaa00; max-width: 380px; width: 90%; text-align: center; box-shadow: 0 0 50px #000; }
+        h2 { color: #ffaa00; text-transform: uppercase; letter-spacing: 2px; margin-top: 0; }
+        .greeting { font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #fff; }
+        input { padding: 14px; margin: 10px 0; width: 100%; box-sizing: border-box; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; font-size: 16px; outline: none; }
         input:focus { border-color: #ffaa00; }
-        button { padding: 16px; width: 100%; background: #22c55e; border: none; color: white; cursor: pointer; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 10px; transition: 0.3s; }
-        button:disabled { background: #444; cursor: not-allowed; }
-        #status { margin-top: 20px; font-weight: bold; font-size: 15px; }
-        /* Console de debug pour le test */
-        #debug { margin-top: 20px; padding: 10px; background: #000; color: #555; font-family: monospace; font-size: 10px; text-align: left; border-radius: 5px; max-height: 80px; overflow-y: auto; border: 1px solid #222; }
+        button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; cursor: pointer; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 15px; transition: 0.3s; text-transform: uppercase; }
+        button:hover { background: #ffcc00; transform: scale(1.02); }
+        button:disabled { background: #444; cursor: not-allowed; transform: none; }
+        #status { margin-top: 25px; font-weight: bold; font-size: 15px; line-height: 1.5; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>THE LOST BEACON</h2>
-    <p style="color: #94a3b8; font-size: 14px;">Réinitialisation du mot de passe</p>
+    <h2>The Lost Beacon</h2>
+    <div id="user-display" class="greeting">Bonjour !</div>
 
-    <input type="password" id="p1" placeholder="Nouveau mot de passe">
-    <input type="password" id="p2" placeholder="Confirmer le mot de passe">
-
-    <button id="submitBtn" onclick="doReset()">CHANGER LE MOT DE PASSE</button>
+    <div id="form-content">
+        <p style="color: #888; font-size: 14px;">Veuillez saisir votre nouveau mot de passe.</p>
+        <input type="password" id="p1" placeholder="Nouveau mot de passe (min 6)">
+        <input type="password" id="p2" placeholder="Confirmez le mot de passe">
+        <button id="btn" onclick="executeReset()">Valider le changement</button>
+    </div>
 
     <div id="status"></div>
-    <div id="debug">Console système :<br></div>
 </div>
 
 <script>
 const TID = "104EA2";
 
-function log(msg) {
-    const d = document.getElementById("debug");
-    d.innerHTML += "> " + msg + "<br>";
-    d.scrollTop = d.scrollHeight;
-}
+// 1. Détection du pseudo et du token au chargement
+window.onload = function() {
+    const params = new URLSearchParams(window.location.search);
+    const user = params.get("u");
+    const token = params.get("token");
 
-async function doReset() {
+    if (user) {
+        document.getElementById("user-display").innerHTML = "Bonjour " + decodeURIComponent(user) + " !";
+    }
+
+    if (!token || token.length < 10) {
+        document.getElementById("form-content").style.display = "none";
+        document.getElementById("status").innerHTML = "❌ Lien de sécurité invalide.<br>Veuillez refaire une demande en jeu.";
+        document.getElementById("status").style.color = "#f87171";
+    }
+};
+
+// 2. Envoi des données (Version native sans SDK pour éviter les blocages)
+async function executeReset() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
-    const p1 = document.getElementById("p1").value;
-    const p2 = document.getElementById("p2").value;
-    const btn = document.getElementById("submitBtn");
+    const pass1 = document.getElementById("p1").value;
+    const pass2 = document.getElementById("p2").value;
+    const btn = document.getElementById("btn");
     const status = document.getElementById("status");
 
-    if (!token) { log("Erreur: Token absent de l'URL"); status.innerHTML = "❌ Lien invalide."; return; }
-    if (p1.length < 6 || p1 !== p2) { log("Erreur: Validation MDP échouée"); status.innerHTML = "❌ Vérifiez vos mots de passe."; return; }
+    if (pass1.length < 6 || pass1 !== pass2) {
+        status.innerHTML = "❌ Mots de passe non valides ou différents.";
+        status.style.color = "#fbbf24";
+        return;
+    }
 
     btn.disabled = true;
-    status.innerHTML = "⏳ Connexion...";
-    log("Envoi de la requête vers PlayFab...");
+    status.innerHTML = "⏳ Connexion aux serveurs de jeu...";
+    status.style.color = "cyan";
 
     try {
-        // APPEL DIRECT NATIVE FETCH (Plus robuste que le SDK pour GitHub)
         const response = await fetch(`https://${TID.toLowerCase()}.playfabapi.com/Client/ResetPassword`, {
             method: 'POST',
+            mode: 'cors', // Force le mode CORS pour passer les navigateurs
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 TitleId: TID,
                 Token: token,
-                Password: p1
+                Password: pass1
             })
         });
 
-        log("Réponse reçue du serveur (HTTP " + response.status + ")");
-        
         const data = await response.json();
 
         if (response.ok && data.code === 200) {
-            log("Succès PlayFab confirmé.");
-            status.innerHTML = "✅ SUCCÈS !<br>Mot de passe modifié.<br>Retournez au jeu.";
+            document.getElementById("form-content").style.display = "none";
+            status.innerHTML = "✅ SUCCÈS !<br>Votre mot de passe a été modifié.<br>Vous pouvez retourner au jeu.";
             status.style.color = "#4ade80";
-            btn.style.display = "none";
         } else {
-            const errorMsg = data.errorMessage || "Lien expiré.";
-            log("Erreur API : " + errorMsg);
-            status.innerHTML = "❌ ÉCHEC : " + errorMsg;
+            status.innerHTML = "❌ ÉCHEC : " + (data.errorMessage || "Lien expiré.");
+            status.style.color = "#f87171";
             btn.disabled = false;
         }
     } catch (err) {
-        log("CRASH RÉSEAU : Le navigateur bloque la requête.");
-        status.innerHTML = "❌ Erreur réseau.<br>Ouvrez ce lien en <b>Navigation Privée</b>.";
+        // ICI C'EST LE BLOCAGE DU NAVIGATEUR
+        status.innerHTML = "❌ Blocage de sécurité détecté.<br>Action : Ouvrez ce lien dans une <b>Fenêtre de Navigation Privée</b>.";
+        status.style.color = "#f87171";
         btn.disabled = false;
     }
 }
-
-log("Page prête. Token détecté : " + (new URLSearchParams(window.location.search).get("token") ? "OUI" : "NON"));
 </script>
 </body>
 </html>
