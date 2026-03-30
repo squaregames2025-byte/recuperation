@@ -81,13 +81,11 @@ async function resetPassword() {
   const p2 = document.getElementById("p2").value;
   const status = document.getElementById("status");
 
-  // Vérif token
   if (!token) {
     status.innerText = "❌ Invalid or missing token.";
     return;
   }
 
-  // Vérif mot de passe
   if (p1.length < 6) {
     status.innerText = "❌ Password must be at least 6 characters.";
     return;
@@ -102,7 +100,7 @@ async function resetPassword() {
 
   try {
 
-    const response = await fetch("https://YOUR_TITLE_ID.playfabapi.com/Client/ResetPassword", {
+    const response = await fetch("https://104EA2.playfabapi.com/Client/ResetPassword", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -118,9 +116,8 @@ async function resetPassword() {
     if (data.code === 200) {
       status.innerText = "✅ Password successfully reset!";
 
-      // OPTION BONUS : redirection après succès
       setTimeout(() => {
-        window.location.href = "https://google.com"; // change si tu veux
+        window.location.href = "https://squaregames2025-byte.github.io";
       }, 2000);
 
     } else {
