@@ -2,81 +2,73 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>The Lost Beacon - Password Recovery</title>
+    <title>The Lost Beacon - Recovery</title>
+    <!-- Chargement du moteur officiel PlayFab -->
+    <script src="https://download.playfab.com/PlayFabClientApi.js"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #050505; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #111; border: 2px solid #ffaa00; border-radius: 12px; padding: 40px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 0 40px #000; }
-        h2 { color: #ffaa00; text-transform: uppercase; margin-bottom: 25px; letter-spacing: 2px; }
-        input { padding: 14px; width: 100%; box-sizing: border-box; margin: 10px 0; border-radius: 6px; border: 1px solid #333; background: #000; color: #fff; font-size: 16px; outline: none; }
-        button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 8px; margin-top: 15px; cursor: pointer; text-transform: uppercase; }
-        #status { margin-top: 25px; font-weight: bold; font-size: 14px; }
-        #log { margin-top: 20px; padding: 10px; background: #080808; color: #444; font-family: monospace; font-size: 10px; text-align: left; border: 1px solid #222; }
+        body { font-family: sans-serif; background: #000; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #111; border: 2px solid #ffaa00; border-radius: 12px; padding: 40px; max-width: 400px; width: 90%; text-align: center; }
+        h2 { color: #ffaa00; text-transform: uppercase; margin: 0 0 20px 0; }
+        input { padding: 14px; width: 100%; box-sizing: border-box; margin: 10px 0; border-radius: 6px; border: 1px solid #444; background: #000; color: #fff; font-size: 16px; outline: none; }
+        button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 8px; margin-top: 15px; cursor: pointer; }
+        #status { margin-top: 25px; font-weight: bold; font-size: 15px; }
+        #debug { margin-top: 20px; font-size: 10px; color: #444; text-align: left; background: #080808; padding: 5px; border: 1px solid #222; }
     </style>
 </head>
 <body>
     <div class="card">
         <h2>The Lost Beacon</h2>
-        <div id="greet" style="font-size: 18px; margin-bottom: 15px;">Bonjour !</div>
+        <div id="greeting" style="font-size: 20px; margin-bottom: 20px;">Bonjour !</div>
         <input type="password" id="p1" placeholder="Nouveau mot de passe">
         <input type="password" id="p2" placeholder="Confirmer le mot de passe">
-        <button onclick="apply()">CHANGER MON MOT DE PASSE</button>
+        <button id="btn" onclick="reset()">MODIFIER LE MOT DE PASSE</button>
         <div id="status"></div>
-        <div id="log">Console :<br></div>
+        <div id="debug">Logs :<br></div>
     </div>
 
 <script>
-const TITLE_ID = "104EA2"; // MAJUSCULES OBLIGATOIRES
+// INITIALISATION
+PlayFab.settings.titleId = "104EA2";
 
-function addLog(m) { document.getElementById("log").innerHTML += "> " + m + "<br>"; }
+function log(m) { document.getElementById("debug").innerHTML += "> " + m + "<br>"; }
 
-function apply() {
+window.onload = function() {
+    const params = new URLSearchParams(window.location.search);
+    const u = params.get("u");
+    if (u) document.getElementById("greeting").innerHTML = "Bonjour " + decodeURIComponent(u) + " !";
+    log("Initialisation OK. TitleId: " + PlayFab.settings.titleId);
+};
+
+function reset() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
-    const u = params.get("u");
     const p1 = document.getElementById("p1").value;
     const p2 = document.getElementById("p2").value;
     const status = document.getElementById("status");
+    const btn = document.getElementById("btn");
 
-    if (u) document.getElementById("greet").innerHTML = "Bonjour " + decodeURIComponent(u) + " !";
-    if (p1 !== p2 || p1.length < 6) { status.innerHTML = "❌ Erreur de saisie."; return; }
+    if (p1 !== p2 || p1.length < 6) { alert("Erreur de saisie."); return; }
 
-    status.innerHTML = "⏳ Connexion au serveur...";
-    addLog("Tentative d'envoi...");
+    btn.disabled = true;
+    status.innerHTML = "⏳ Connexion aux serveurs...";
+    log("Appel de l'API PlayFab...");
 
-    // ON FORCE LE TITLE ID EN MAJUSCULES DANS L'URL
-    const url = "https://" + TITLE_ID + ".playfabapi.com/Client/ResetPassword";
-    addLog("URL : " + url);
-
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", url, true);
-    xhr.setRequestHeader("Content-Type", "application/json");
-
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState === 4) {
-            addLog("Réponse reçue. HTTP Code : " + xhr.status);
-            try {
-                const res = JSON.parse(xhr.responseText);
-                if (xhr.status === 200 && res.code === 200) {
-                    status.innerHTML = "✅ SUCCÈS ! Mot de passe modifié.";
-                    status.style.color = "#00ff00";
-                    addLog("Opération réussie.");
-                } else {
-                    status.innerHTML = "❌ ERREUR : " + (res.errorMessage || "Lien expiré");
-                    addLog("Détail PlayFab : " + res.error);
-                }
-            } catch(e) {
-                status.innerHTML = "❌ Erreur de lecture serveur.";
-                addLog("Réponse brute : " + xhr.responseText.substring(0, 50));
-            }
+    // ON UTILISE LA FONCTION NATIVE DU SDK (Plus de chance de passer)
+    PlayFabClientAPI.ResetPassword({
+        Token: token,
+        Password: p1
+    }, function(result, error) {
+        if (result) {
+            status.innerHTML = "✅ SUCCÈS ! Mot de passe modifié.";
+            status.style.color = "#00ff00";
+            log("Succès reçu.");
+        } else {
+            status.innerHTML = "❌ ÉCHEC : " + (error ? error.errorMessage : "Erreur inconnue");
+            status.style.color = "red";
+            log("Erreur : " + (error ? error.error : "Unknown"));
+            btn.disabled = false;
         }
-    };
-
-    xhr.onerror = function() {
-        status.innerHTML = "❌ Blocage réseau navigateur.";
-        addLog("ERREUR : La connexion a été coupée par Edge.");
-    };
-
-    xhr.send(JSON.stringify({ TitleId: TITLE_ID, Token: token, Password: p1 }));
+    });
 }
 </script>
 </body>
