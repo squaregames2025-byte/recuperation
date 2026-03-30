@@ -2,71 +2,74 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>The Lost Beacon - Reset Password</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Lost Beacon - Reset</title>
     <style>
-        body { font-family: sans-serif; background: #000; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #111; border: 2px solid #ffaa00; border-radius: 12px; padding: 40px; max-width: 400px; width: 90%; text-align: center; }
-        h2 { color: #ffaa00; text-transform: uppercase; margin-bottom: 20px; }
-        input { padding: 14px; width: 100%; box-sizing: border-box; margin: 10px 0; border-radius: 6px; border: 1px solid #333; background: #000; color: #fff; font-size: 16px; }
-        button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 8px; margin-top: 20px; cursor: pointer; width: 100%; }
+        body { font-family: 'Segoe UI', sans-serif; background: #050505; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #111; border: 2px solid #ffaa00; border-radius: 12px; padding: 40px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
+        h2 { color: #ffaa00; text-transform: uppercase; margin-bottom: 30px; letter-spacing: 2px; }
+        .user { font-size: 24px; font-weight: bold; margin-bottom: 20px; }
+        input { padding: 14px; width: 100%; box-sizing: border-box; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; font-size: 16px; outline: none; }
+        input:focus { border-color: #ffaa00; }
+        button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 8px; margin-top: 20px; cursor: pointer; text-transform: uppercase; width: 100%; }
         #status { margin-top: 25px; font-weight: bold; font-size: 15px; padding: 15px; border-radius: 6px; }
     </style>
 </head>
 <body>
     <div class="card">
         <h2>The Lost Beacon</h2>
+        <div id="greeting" class="user">Bonjour !</div>
         <div id="form-ui">
-            <p id="greet">Réinitialisation du mot de passe</p>
-            <input type="password" id="p1" placeholder="Nouveau mot de passe">
+            <p style="font-size: 14px; color: #888;">Nouveau mot de passe (6 car. min) :</p>
+            <input type="password" id="p1" placeholder="Mot de passe">
             <input type="password" id="p2" placeholder="Confirmer">
-            <button onclick="send()">VALIDER LE CHANGEMENT</button>
+            <button onclick="send()">MODIFIER MON COMPTE</button>
         </div>
-        <div id="status"></div>
+        <div id="status" style="display:none;"></div>
     </div>
 
 <script>
     const TID = "104EA2";
     const params = new URLSearchParams(window.location.search);
-    const user = params.get("u");
-    if (user) document.getElementById("greet").innerText = "Bonjour " + decodeURIComponent(user) + " !";
+    const u = params.get("u");
+    const t = params.get("token");
 
-    async function send() {
-        const token = params.get("token");
+    // Affichage immédiat du pseudo
+    if (u) document.getElementById("greeting").innerText = "Bonjour " + decodeURIComponent(u) + " !";
+
+    function send() {
         const p1 = document.getElementById("p1").value;
         const p2 = document.getElementById("p2").value;
         const status = document.getElementById("status");
 
-        if (!token) { status.innerHTML = "❌ Token manquant dans l'URL."; return; }
-        if (p1 !== p2 || p1.length < 6) { alert("Vérifiez vos mots de passe."); return; }
+        if (!t) { alert("Token manquant. Utilisez le lien du mail."); return; }
+        if (p1 !== p2 || p1.length < 6) { alert("Vérifiez la saisie."); return; }
 
-        status.innerHTML = "⏳ Connexion à PlayFab...";
         status.style.display = "block";
+        status.style.background = "#222";
+        status.innerHTML = "⏳ Connexion à PlayFab...";
 
-        try {
-            // --- CORRECTION : NOM DE L'API = ConfirmPasswordReset ---
-            const response = await fetch(`https://${TID.toLowerCase()}.playfabapi.com/Client/ConfirmPasswordReset`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    TitleId: TID,
-                    Token: token,
-                    Password: p1
-                })
-            });
+        const xhr = new XMLHttpRequest();
+        // L'API exacte est Client/ResetPassword
+        xhr.open("POST", "https://" + TID.toLowerCase() + ".playfabapi.com/Client/ResetPassword", true);
+        xhr.setRequestHeader("Content-Type", "application/json");
 
-            const data = await response.json();
-
-            if (data.code === 200) {
-                document.getElementById("form-ui").style.display = "none";
-                status.style.background = "#064e3b";
-                status.innerHTML = "✅ SUCCÈS !<br>Mot de passe modifié.<br>Retournez au jeu.";
-            } else {
-                status.style.background = "#7f1d1d";
-                status.innerHTML = "❌ ERREUR : " + (data.errorMessage || "Lien expiré");
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4) {
+                const res = JSON.parse(xhr.responseText);
+                if (xhr.status === 200 && res.code === 200) {
+                    document.getElementById("form-ui").style.display = "none";
+                    status.style.background = "#064e3b";
+                    status.style.color = "#4ade80";
+                    status.innerHTML = "✅ SUCCÈS !<br>Votre mot de passe a été modifié.";
+                } else {
+                    status.style.background = "#7f1d1d";
+                    status.style.color = "#f87171";
+                    status.innerHTML = "❌ ERREUR : " + (res.errorMessage || "Lien expiré");
+                }
             }
-        } catch (e) {
-            status.innerHTML = "❌ ERREUR RÉSEAU : Votre navigateur bloque la requête.";
-        }
+        };
+        xhr.send(JSON.stringify({ TitleId: TID, Token: t, Password: p1 }));
     }
 </script>
 </body>
