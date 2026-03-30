@@ -1,172 +1,88 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Lost Beacon - Réinitialisation du mot de passe</title>
-    <style>
-        /* Design immersif inspiré de The Lost Beacon */
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background-color: #050505; 
-            color: #ffffff; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            margin: 0; 
-            background-image: radial-gradient(circle, #1a1a1a 0%, #050505 100%);
-        }
-        .card { 
-            background: rgba(20, 20, 20, 0.95); 
-            border: 2px solid #ffaa00; 
-            border-radius: 15px; 
-            padding: 40px; 
-            max-width: 400px; 
-            width: 90%; 
-            box-shadow: 0 0 50px rgba(255, 170, 0, 0.15); 
-            text-align: center; 
-        }
-        h2 { color: #ffaa00; text-transform: uppercase; margin-bottom: 30px; letter-spacing: 3px; font-weight: 300; }
-        .user-greeting { font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #fff; }
-        p { font-size: 14px; color: #888; margin-bottom: 20px; }
-        
-        input { 
-            padding: 14px; 
-            width: 100%; 
-            box-sizing: border-box; 
-            margin: 10px 0; 
-            border-radius: 6px; 
-            border: 1px solid #333; 
-            background: #000; 
-            color: #fff; 
-            font-size: 16px; 
-            outline: none;
-            transition: border 0.3s;
-        }
-        input:focus { border-color: #ffaa00; }
+<meta charset="UTF-8">
+<title>The Lost Beacon - Password Reset</title>
+<script src="https://download.playfab.com/PlayFabClientApi.js"></script>
 
-        button { 
-            padding: 16px; 
-            background: linear-gradient(135deg, #ffaa00 0%, #cc8800 100%); 
-            border: none; 
-            cursor: pointer; 
-            color: #000; 
-            font-weight: bold; 
-            border-radius: 6px; 
-            margin-top: 20px; 
-            width: 100%; 
-            text-transform: uppercase; 
-            letter-spacing: 1px;
-            transition: all 0.3s;
-        }
-        button:hover { filter: brightness(1.2); transform: translateY(-2px); }
-        button:disabled { background: #444; cursor: not-allowed; transform: none; }
-        
-        #status { margin-top: 25px; font-weight: bold; font-size: 15px; min-height: 20px; }
-        #form-area { display: none; }
-    </style>
+<style>
+body { font-family: 'Segoe UI', Arial; text-align: center; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+.card { background: #1e293b; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid #334155; max-width: 350px; width: 90%; }
+h2 { color: #f59e0b; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; }
+input { padding: 12px; margin: 10px 0; width: 100%; box-sizing: border-box; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: white; font-size: 16px; }
+button { padding: 14px; width: 100%; background: #22c55e; border: none; color: white; cursor: pointer; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 10px; transition: 0.3s; }
+button:hover { background: #16a34a; }
+#message { margin-top: 20px; font-weight: bold; font-size: 14px; }
+</style>
 </head>
+
 <body>
 
-    <div class="card">
-        <h2>The Lost Beacon</h2>
-        
-        <!-- Salutation personnalisée -->
-        <div id="greeting" class="user-greeting">Chargement...</div>
+<div class="card">
+    <h2>The Lost Beacon</h2>
+    <p style="font-size: 14px; color: #94a3b8;">Réinitialisation de mot de passe</p>
 
-        <div id="form-area">
-            <p>Veuillez définir votre nouveau mot de passe sécurisé (6 caractères minimum).</p>
-            <input type="password" id="pass1" placeholder="Nouveau mot de passe">
-            <input type="password" id="pass2" placeholder="Confirmez le mot de passe">
-            <button id="btn-submit" onclick="submitNewPassword()">Mettre à jour mon profil</button>
-        </div>
+    <input type="password" id="newPassword" placeholder="Nouveau mot de passe"><br>
+    <input type="password" id="confirmPassword" placeholder="Confirmer le mot de passe"><br>
 
-        <div id="status"></div>
-    </div>
+    <button onclick="resetPassword()">CHANGER LE MOT DE PASSE</button>
 
-    <script>
-        // Ta configuration PlayFab
-        const TITLE_ID = "104EA2";
-        let TOKEN = null;
+    <div id="message"></div>
+</div>
 
-        // 1. Initialisation au chargement de la page
-        window.onload = function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const username = urlParams.get('u');
-            TOKEN = urlParams.get('token');
+<script>
+// CONFIGURATION
+PlayFab.settings.titleId = "104EA2";
 
-            // Affichage du pseudo (ex: Bonjour lupin2 !)
-            if (username) {
-                document.getElementById("greeting").innerHTML = "Bonjour " + decodeURIComponent(username) + " !";
-            } else {
-                document.getElementById("greeting").innerHTML = "Bonjour !";
-            }
+function resetPassword() {
+    // 1. Lire le token dans l'URL
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    
+    const password = document.getElementById("newPassword").value;
+    const confirm = document.getElementById("confirmPassword").value;
+    const msgEl = document.getElementById("message");
 
-            // Vérification de la présence du Token
-            if (TOKEN && TOKEN.length > 5) {
-                document.getElementById("form-area").style.display = "block";
-            } else {
-                showStatus("❌ Le lien est invalide ou a expiré.<br>Veuillez refaire une demande depuis le jeu.", "#ff4444");
-            }
-        };
+    if (!token) {
+        showMessage("❌ Erreur : Lien invalide ou expiré.", true);
+        return;
+    }
 
-        // 2. Envoi des données vers PlayFab
-        async function submitNewPassword() {
-            const p1 = document.getElementById("pass1").value;
-            const p2 = document.getElementById("pass2").value;
-            const btn = document.getElementById("btn-submit");
+    if (password.length < 6) {
+        showMessage("❌ Trop court (min. 6 caractères).", true);
+        return;
+    }
 
-            // Validation locale
-            if (p1.length < 6) {
-                showStatus("❌ Le mot de passe doit faire au moins 6 caractères.", "#ffaa00");
-                return;
-            }
-            if (p1 !== p2) {
-                showStatus("❌ Les mots de passe ne sont pas identiques.", "#ff4444");
-                return;
-            }
+    if (password !== confirm) {
+        showMessage("❌ Les mots de passe ne correspondent pas.", true);
+        return;
+    }
 
-            // Préparation de l'envoi
-            btn.disabled = true;
-            showStatus("🔄 Connexion aux serveurs PlayFab...", "cyan");
+    showMessage("⏳ Connexion aux serveurs...", false);
 
-            try {
-                // Appel direct à l'API PlayFab via fetch
-                const response = await fetch(`https://${TITLE_ID.toLowerCase()}.playfabapi.com/Client/ResetPassword`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        TitleId: TITLE_ID,
-                        Token: TOKEN,
-                        Password: p1
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.code === 200) {
-                    // SUCCÈS
-                    document.getElementById("form-area").style.display = "none";
-                    showStatus("✅ SUCCÈS !<br>Votre mot de passe a été modifié.<br>Vous pouvez fermer cette page et retourner au jeu.", "#00ff00");
-                } else {
-                    // ERREUR SERVEUR (Token expiré, etc)
-                    const errorMsg = data.errorMessage || "Une erreur est survenue.";
-                    showStatus("❌ Erreur : " + errorMsg, "#ff4444");
-                    btn.disabled = false;
-                }
-            } catch (err) {
-                // ERREUR RÉSEAU
-                showStatus("❌ Erreur de connexion aux serveurs de jeu.", "#ff4444");
-                btn.disabled = false;
-            }
+    // 2. Appel API correct (ResetPassword)
+    PlayFabClientAPI.ResetPassword({
+        Token: token,
+        Password: password,
+        TitleId: PlayFab.settings.titleId
+    },
+    function(result, error) {
+        if (result) {
+            showMessage("✅ Mot de passe modifié ! Retournez au jeu.");
+            // Optionnel : masquer le formulaire après succès
+            document.querySelector('button').style.display = 'none';
+        } else {
+            showMessage("❌ Erreur : " + error.errorMessage, true);
         }
+    });
+}
 
-        function showStatus(msg, color) {
-            const div = document.getElementById("status");
-            div.innerHTML = msg;
-            div.style.color = color;
-        }
-    </script>
+function showMessage(msg, isError = false) {
+    const el = document.getElementById("message");
+    el.innerText = msg;
+    el.style.color = isError ? "#f87171" : "#4ade80";
+}
+</script>
+
 </body>
 </html>
