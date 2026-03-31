@@ -10,7 +10,7 @@
         input { padding: 14px; width: 100%; box-sizing: border-box; margin: 10px 0; border-radius: 6px; border: 1px solid #333; background: #000; color: #fff; font-size: 16px; }
         button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 8px; margin-top: 20px; cursor: pointer; }
         #status { margin-top: 25px; font-weight: bold; font-size: 15px; padding: 15px; border-radius: 6px; display: none; }
-        .debug-text { font-size: 12px; font-weight: normal; color: #aaa; margin-top: 10px; display: block; }
+        .debug-info { font-size: 10px; color: #555; margin-top: 20px; word-break: break-all; }
     </style>
 </head>
 <body>
@@ -23,44 +23,44 @@
             <button onclick="realReset()">VALIDER LE CHANGEMENT</button>
         </div>
         <div id="status"></div>
+        <div id="debug" class="debug-info"></div>
     </div>
 
 <script>
     async function realReset() {
-        const TID = "104EA2";
+        // On nettoie l'ID de tout espace accidentel
+        const TID = "104EA2".trim(); 
+        
         const params = new URLSearchParams(window.location.search);
         const token = params.get("token");
         const p1 = document.getElementById("p1").value;
         const p2 = document.getElementById("p2").value;
         const status = document.getElementById("status");
+        const debug = document.getElementById("debug");
 
-        if (!token) { 
-            alert("Lien invalide ou expiré."); 
-            return; 
-        }
-        if (p1 !== p2 || p1.length < 6) { 
-            alert("Vérifiez vos mots de passe (minimum 6 caractères et ils doivent être identiques)."); 
-            return; 
-        }
+        if (!token) { alert("Lien invalide (Token manquant)."); return; }
+        if (p1 !== p2 || p1.length < 6) { alert("Vérifiez vos mots de passe (min 6 caractères)."); return; }
 
         status.style.display = "block";
         status.innerHTML = "⏳ Connexion à PlayFab...";
         status.style.color = "#ffaa00";
 
+        // On construit l'URL proprement sans forcer de minuscules
+        const apiUrl = "https://" + TID + ".playfabapi.com/Client/ResetPassword";
+        
         try {
-            console.log("Envoi de la requête à PlayFab...");
-            const response = await fetch(`https://${TID}.playfabapi.com/Client/ResetPassword`, {
+            console.log("Appel de : " + apiUrl);
+            
+            const response = await fetch(apiUrl, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json' 
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    TitleId: TID, // On rajoute le TitleId ici aussi par sécurité
                     Token: token,
                     Password: p1
                 })
             });
 
-            console.log("Réponse reçue, traitement...");
             const data = await response.json();
 
             if (data.code === 200) {
@@ -68,15 +68,13 @@
                 status.innerHTML = "✅ SUCCÈS !<br>Votre mot de passe a été modifié.";
                 status.style.color = "#00ff00";
             } else {
-                status.innerHTML = "❌ ERREUR PLAYFAB : <br>" + (data.errorMessage || "Lien invalide ou expiré.");
+                status.innerHTML = "❌ ERREUR : " + (data.errorMessage || "Lien expiré");
                 status.style.color = "red";
             }
         } catch (e) {
-            console.error("Détail de l'erreur réseau :", e);
-            status.innerHTML = `❌ ERREUR RÉSEAU<br>
-                <span class="debug-text">Détail technique : ${e.message}</span>
-                <span class="debug-text" style="color:#ffaa00;">💡 Solution : Désactivez votre bloqueur de pub (AdBlock, uBlock) ou essayez en navigation privée. Le navigateur bloque la connexion aux serveurs du jeu.</span>`;
+            status.innerHTML = "❌ ERREUR RÉSEAU.";
             status.style.color = "red";
+            debug.innerHTML = "Détail technique : " + e.message + "<br>URL testée : " + apiUrl;
         }
     }
 </script>
