@@ -2,15 +2,14 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>The Lost Beacon - Password Reset</title>
+    <title>The Lost Beacon - Reset</title>
     <style>
         body { font-family: sans-serif; background: #050505; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .card { background: #111; border: 2px solid #ffaa00; border-radius: 12px; padding: 40px; max-width: 400px; width: 90%; text-align: center; border: 1px solid #333; }
         h2 { color: #ffaa00; text-transform: uppercase; margin-bottom: 20px; }
         input { padding: 14px; width: 100%; box-sizing: border-box; margin: 10px 0; border-radius: 6px; border: 1px solid #333; background: #000; color: #fff; font-size: 16px; }
         button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 8px; margin-top: 20px; cursor: pointer; }
-        #status { margin-top: 25px; font-weight: bold; padding: 10px; border-radius: 6px; display: none; }
-        .debug { margin-top: 20px; font-family: monospace; font-size: 10px; color: #444; text-align: left; word-break: break-all; border-top: 1px solid #222; padding-top: 5px; }
+        #status { margin-top: 25px; font-weight: bold; padding: 10px; border-radius: 6px; }
     </style>
 </head>
 <body>
@@ -20,47 +19,62 @@
             <p>Définissez votre nouveau mot de passe :</p>
             <input type="password" id="p1" placeholder="Nouveau mot de passe">
             <input type="password" id="p2" placeholder="Confirmer le mot de passe">
-            <button onclick="realReset()">VALIDER LE CHANGEMENT</button>
+            <button onclick="validerReset()">VALIDER LE CHANGEMENT</button>
         </div>
         <div id="status"></div>
-        <div id="debug" class="debug"></div>
     </div>
 
 <script>
-    async function realReset() {
-        const titleId = "104EA2"; 
+    async function validerReset() {
+        const status = document.getElementById("status");
+        status.style.display = "block";
+        status.style.color = "white";
+        status.innerHTML = "⏳ Bouton cliqué, traitement en cours...";
+
+        const TID = "104EA2";
         const urlParams = new URLSearchParams(window.location.search);
-        const token = urlParams.get('token'); // PlayFab envoie le token ici
-        
+        const token = urlParams.get('token');
         const p1 = document.getElementById("p1").value;
         const p2 = document.getElementById("p2").value;
-        const status = document.getElementById("status");
-        const debug = document.getElementById("debug");
 
-        if (!token) { alert("Token introuvable. Utilisez le lien du mail."); return; }
-        if (p1 !== p2 || p1.length < 6) { alert("Les mots de passe doivent être identiques et faire 6 caractères minimum."); return; }
-
-        status.style.display = "block";
-        status.style.color = "#ffaa00";
-        status.innerHTML = "⏳ Envoi à PlayFab...";
-        debug.innerHTML = "Appel API en cours...";
-
-        // Utilisation de l'API Client/ResetPassword (l'URL doit être en minuscules)
-        const apiUrl = `https://${titleId.toLowerCase()}.playfabapi.com/Client/ResetPassword`;
+        if (!token) { 
+            status.innerHTML = "❌ Erreur : Token absent de l'URL."; 
+            return; 
+        }
+        if (p1 !== p2 || p1.length < 6) { 
+            status.innerHTML = "❌ Les mots de passe ne correspondent pas ou sont trop courts."; 
+            return; 
+        }
 
         try {
+            const apiUrl = `https://${TID.toLowerCase()}.playfabapi.com/Client/ResetPassword`;
+            
             const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    TitleId: titleId,
+                    TitleId: TID,
                     Token: token,
                     Password: p1
                 })
             });
 
-            const text = await response.text();
-            let data = {};
-            try { data = JSON.parse(text); } catch(e) {}
+            const data = await response.json();
 
-            if (response.ok && data.code === 200) {
+            if (data.code === 200) {
+                document.getElementById("ui").style.display = "none";
+                status.innerHTML = "✅ SUCCÈS ! Votre mot de passe a été modifié.";
+                status.style.color = "#00ff00";
+            } else {
+                status.innerHTML = "❌ ERREUR PLAYFAB : " + (data.errorMessage || "Lien expiré");
+                status.style.color = "red";
+            }
+        } catch (e) {
+            status.innerHTML = "❌ ERREUR RÉSEAU : Votre navigateur ou un bloqueur empêche la connexion à PlayFab.";
+            status.style.color = "red";
+            console.error(e);
+        }
+    }
+</script>
+</body>
+</html>
