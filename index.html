@@ -5,79 +5,86 @@
     <title>The Lost Beacon - Reset</title>
     <style>
         body { font-family: sans-serif; background: #050505; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #111; border: 2px solid #ffaa00; border-radius: 12px; padding: 40px; max-width: 400px; width: 90%; text-align: center; border: 2px solid #222; }
+        .card { background: #111; border: 2px solid #ffaa00; border-radius: 12px; padding: 40px; max-width: 400px; width: 90%; text-align: center; border: 1px solid #333; }
         h2 { color: #ffaa00; text-transform: uppercase; margin-bottom: 20px; }
         input { padding: 14px; width: 100%; box-sizing: border-box; margin: 10px 0; border-radius: 6px; border: 1px solid #333; background: #000; color: #fff; font-size: 16px; }
         button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 8px; margin-top: 20px; cursor: pointer; }
-        #status { margin-top: 25px; font-weight: bold; display: none; padding: 10px; border-radius: 6px; }
-        .debug-log { margin-top: 20px; font-family: monospace; font-size: 10px; color: #555; text-align: left; word-break: break-all; border-top: 1px solid #222; padding-top: 10px; }
+        #status { margin-top: 25px; font-weight: bold; padding: 10px; border-radius: 6px; display: none; }
+        .console { margin-top: 20px; background: #000; color: #0f0; font-family: monospace; font-size: 10px; padding: 10px; text-align: left; border: 1px solid #222; overflow-y: auto; max-height: 100px; }
     </style>
 </head>
 <body>
     <div class="card">
         <h2>The Lost Beacon</h2>
         <div id="ui">
-            <p>Définissez votre nouveau mot de passe :</p>
-            <input type="password" id="p1" placeholder="Nouveau mot de passe">
-            <input type="password" id="p2" placeholder="Confirmer le mot de passe">
-            <button onclick="executeReset()">VALIDER LE CHANGEMENT</button>
+            <p>Nouveau mot de passe :</p>
+            <input type="password" id="p1" placeholder="Minimum 6 caractères">
+            <input type="password" id="p2" placeholder="Confirmer">
+            <button onclick="finalAttempt()">VALIDER LE CHANGEMENT</button>
         </div>
         <div id="status"></div>
-        <div id="debug" class="debug-log">Prêt...</div>
+        <div id="debug" class="console">Console prête...</div>
     </div>
 
 <script>
-    async function executeReset() {
-        const TITLE_ID = "104EA2";
+    function log(m) { document.getElementById("debug").innerHTML += "<br>> " + m; }
+
+    async function finalAttempt() {
+        const tid = "104EA2";
         const params = new URLSearchParams(window.location.search);
         const token = params.get("token");
         const p1 = document.getElementById("p1").value;
         const p2 = document.getElementById("p2").value;
         const status = document.getElementById("status");
-        const debug = document.getElementById("debug");
 
-        if (!token) { alert("Erreur : Aucun token trouvé dans l'URL."); return; }
-        if (p1 !== p2 || p1.length < 6) { alert("Mots de passe non identiques ou trop courts."); return; }
+        if (!token) { alert("Token absent ! Utilisez le lien du mail."); return; }
+        if (p1 !== p2 || p1.length < 6) { alert("Erreur mots de passe."); return; }
 
         status.style.display = "block";
-        status.style.color = "#ffaa00";
-        status.innerHTML = "⏳ Tentative de réinitialisation...";
-        debug.innerHTML = "Appel de l'API...";
+        status.innerHTML = "⏳ Connexion...";
+        log("Démarrage...");
 
         try {
-            // URL propre
-            const apiUrl = `https://${TITLE_ID.toLowerCase()}.playfabapi.com/Client/ResetPassword`;
-
-            const response = await fetch(apiUrl, {
+            // Utilisation de l'URL telle qu'elle apparaît dans ton screenshot API Access
+            const url = `https://${tid}.playfabapi.com/Client/ResetPassword`;
+            
+            const response = await fetch(url, {
                 method: 'POST',
+                mode: 'cors', // Force le mode CORS
                 headers: { 
-                    'Content-Type': 'application/json',
-                    'X-PlayFabSDK': 'JavaScriptSDK-1.123.0' // LA LIGNE MAGIQUE pour éviter le 404
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    TitleId: TITLE_ID,
+                    TitleId: tid,
                     Token: token,
                     Password: p1
                 })
             });
 
+            log("Statut reçu : " + response.status);
             const text = await response.text();
-            debug.innerHTML = "Réponse serveur : " + text;
+            log("Brut : " + text);
+
+            if (!text) {
+                throw new Error("Le serveur a renvoyé une réponse vide (CORS probable).");
+            }
 
             const data = JSON.parse(text);
 
             if (data.code === 200) {
                 document.getElementById("ui").style.display = "none";
-                status.innerHTML = "✅ SUCCÈS !<br>Votre mot de passe a été mis à jour.";
+                status.innerHTML = "✅ SUCCÈS ! Retournez sur le jeu.";
                 status.style.color = "#00ff00";
             } else {
-                status.innerHTML = "❌ ÉCHEC : " + (data.errorMessage || "Erreur PlayFab");
+                status.innerHTML = "❌ ERREUR : " + (data.errorMessage || "Lien expiré");
                 status.style.color = "red";
             }
+
         } catch (e) {
-            status.innerHTML = "❌ ERREUR RÉSEAU / CORS";
+            log("ERREUR : " + e.message);
+            status.innerHTML = "❌ ÉCHEC DE CONNEXION";
             status.style.color = "red";
-            debug.innerHTML = "Erreur : " + e.message;
+            status.innerHTML += "<br><small>Essayez sur Chrome (PC) sans extensions.</small>";
         }
     }
 </script>
