@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>The Lost Beacon - Reset</title>
+    <title>The Lost Beacon - Password Reset</title>
     <style>
         body { font-family: sans-serif; background: #050505; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .card { background: #111; border: 2px solid #ffaa00; border-radius: 12px; padding: 40px; max-width: 400px; width: 90%; text-align: center; border: 1px solid #333; }
@@ -10,81 +10,82 @@
         input { padding: 14px; width: 100%; box-sizing: border-box; margin: 10px 0; border-radius: 6px; border: 1px solid #333; background: #000; color: #fff; font-size: 16px; }
         button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 8px; margin-top: 20px; cursor: pointer; }
         #status { margin-top: 25px; font-weight: bold; padding: 10px; border-radius: 6px; display: none; }
-        .console { margin-top: 20px; background: #000; color: #0f0; font-family: monospace; font-size: 10px; padding: 10px; text-align: left; border: 1px solid #222; overflow-y: auto; max-height: 100px; }
+        .console { margin-top: 20px; background: #000; color: #0f0; font-family: monospace; font-size: 10px; padding: 10px; text-align: left; border: 1px solid #222; max-height: 150px; overflow-y: auto; }
     </style>
 </head>
 <body>
     <div class="card">
         <h2>The Lost Beacon</h2>
         <div id="ui">
-            <p>Nouveau mot de passe :</p>
-            <input type="password" id="p1" placeholder="Minimum 6 caractères">
-            <input type="password" id="p2" placeholder="Confirmer">
-            <button onclick="finalAttempt()">VALIDER LE CHANGEMENT</button>
+            <p>Définissez votre nouveau mot de passe :</p>
+            <input type="password" id="p1" placeholder="Nouveau mot de passe">
+            <input type="password" id="p2" placeholder="Confirmer le mot de passe">
+            <button onclick="sendReset()">VALIDER LE CHANGEMENT</button>
         </div>
         <div id="status"></div>
         <div id="debug" class="console">Console prête...</div>
     </div>
 
 <script>
-    function log(m) { document.getElementById("debug").innerHTML += "<br>> " + m; }
+    function log(m) { document.getElementById("debug").innerHTML += "<br>> " + m; console.log(m); }
 
-    async function finalAttempt() {
-        const tid = "104EA2";
+    async function sendReset() {
+        const titleIdRaw = "104EA2"; // Ton ID
+        const titleId = titleIdRaw.toLowerCase(); // FORCE MINUSCULES POUR L'URL
+        
         const params = new URLSearchParams(window.location.search);
         const token = params.get("token");
         const p1 = document.getElementById("p1").value;
         const p2 = document.getElementById("p2").value;
         const status = document.getElementById("status");
 
-        if (!token) { alert("Token absent ! Utilisez le lien du mail."); return; }
-        if (p1 !== p2 || p1.length < 6) { alert("Erreur mots de passe."); return; }
+        if (!token) { alert("Token manquant !"); return; }
+        if (p1 !== p2 || p1.length < 6) { alert("Erreur de mot de passe."); return; }
 
         status.style.display = "block";
-        status.innerHTML = "⏳ Connexion...";
-        log("Démarrage...");
+        status.style.color = "#ffaa00";
+        status.innerHTML = "⏳ Connexion à PlayFab...";
+        
+        const url = `https://${titleId}.playfabapi.com/Client/ResetPassword`;
+        log("Tentative sur : " + url);
 
         try {
-            // Utilisation de l'URL telle qu'elle apparaît dans ton screenshot API Access
-            const url = `https://${tid}.playfabapi.com/Client/ResetPassword`;
-            
             const response = await fetch(url, {
                 method: 'POST',
-                mode: 'cors', // Force le mode CORS
-                headers: { 
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    TitleId: tid,
+                    TitleId: titleIdRaw.toUpperCase(),
                     Token: token,
                     Password: p1
                 })
             });
 
-            log("Statut reçu : " + response.status);
-            const text = await response.text();
-            log("Brut : " + text);
-
-            if (!text) {
-                throw new Error("Le serveur a renvoyé une réponse vide (CORS probable).");
+            log("Statut HTTP : " + response.status);
+            
+            if (response.status === 404) {
+                throw new Error("ERREUR 404 : Le serveur PlayFab ne trouve pas ce TitleID. Vérifiez que 'Disable Client API' est décoché dans PlayFab.");
             }
 
+            const text = await response.text();
+            log("Réponse brute : " + text);
+
+            if (!text) throw new Error("Réponse vide du serveur.");
+            
             const data = JSON.parse(text);
 
             if (data.code === 200) {
                 document.getElementById("ui").style.display = "none";
-                status.innerHTML = "✅ SUCCÈS ! Retournez sur le jeu.";
+                status.innerHTML = "✅ SUCCÈS ! Mot de passe modifié.";
                 status.style.color = "#00ff00";
             } else {
-                status.innerHTML = "❌ ERREUR : " + (data.errorMessage || "Lien expiré");
+                status.innerHTML = "❌ ERREUR : " + (data.errorMessage || "Lien invalide");
                 status.style.color = "red";
             }
 
         } catch (e) {
             log("ERREUR : " + e.message);
-            status.innerHTML = "❌ ÉCHEC DE CONNEXION";
+            status.innerHTML = "❌ ÉCHEC TECHNIQUE";
             status.style.color = "red";
-            status.innerHTML += "<br><small>Essayez sur Chrome (PC) sans extensions.</small>";
         }
     }
 </script>
