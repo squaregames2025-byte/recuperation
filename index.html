@@ -2,82 +2,75 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Lost Beacon - Reset</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #050505; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #111; border: 2px solid #ffaa00; border-radius: 15px; padding: 40px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 0 50px #000; }
+        body { font-family: sans-serif; background: #000; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #111; border: 2px solid #ffaa00; border-radius: 12px; padding: 40px; max-width: 400px; width: 90%; text-align: center; }
         h2 { color: #ffaa00; text-transform: uppercase; margin-bottom: 20px; }
-        .user { font-size: 22px; font-weight: bold; margin-bottom: 20px; color: #fff; }
-        input { padding: 14px; width: 100%; box-sizing: border-box; margin: 10px 0; border-radius: 6px; border: 1px solid #333; background: #000; color: #fff; font-size: 16px; outline: none; }
-        input:focus { border-color: #ffaa00; }
-        button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 8px; margin-top: 20px; cursor: pointer; text-transform: uppercase; width: 100%; transition: 0.3s; }
-        button:hover { background: #ffcc00; }
-        #status { margin-top: 25px; font-weight: bold; font-size: 15px; padding: 15px; border-radius: 6px; }
+        input { padding: 14px; width: 100%; box-sizing: border-box; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; font-size: 16px; outline: none; }
+        button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 8px; margin-top: 20px; cursor: pointer; width: 100%; }
+        #status { margin-top: 25px; font-weight: bold; font-size: 14px; padding: 10px; border-radius: 6px; }
     </style>
 </head>
 <body>
     <div class="card">
         <h2>The Lost Beacon</h2>
-        <div id="greeting" class="user">Vérification...</div>
-        <div id="form-ui">
-            <p style="font-size: 14px; color: #888;">Entrez votre nouveau mot de passe (6 car. min) :</p>
-            <input type="password" id="p1" placeholder="Mot de passe">
+        <div id="greeting" style="font-size: 20px; margin-bottom: 20px;">Bonjour !</div>
+        <div id="ui">
+            <input type="password" id="p1" placeholder="Nouveau mot de passe">
             <input type="password" id="p2" placeholder="Confirmer">
-            <button id="mainBtn" onclick="send()">MODIFIER MON COMPTE</button>
+            <button onclick="send()">MODIFIER MON COMPTE</button>
         </div>
-        <div id="status" style="display:none;"></div>
+        <div id="status"></div>
     </div>
 
 <script>
     const TID = "104EA2";
     const params = new URLSearchParams(window.location.search);
-    const u = params.get("u");
-    const t = params.get("token");
+    
+    // On lit EXACTEMENT ce qui est dans le mail
+    const token = params.get("token");
+    const user = params.get("u");
 
-    // Affiche Lupin2 dès l'ouverture de la page
-    if (u) document.getElementById("greeting").innerText = "Bonjour " + decodeURIComponent(u) + " !";
+    // Affiche le nom dès l'ouverture
+    if (user) document.getElementById("greeting").innerText = "Bonjour " + decodeURIComponent(user) + " !";
 
     async function send() {
         const p1 = document.getElementById("p1").value;
         const p2 = document.getElementById("p2").value;
         const status = document.getElementById("status");
-        const btn = document.getElementById("mainBtn");
 
-        if (!t || t.length < 5) { alert("Erreur : Token absent. Utilisez le lien du mail."); return; }
+        if (!token) {
+            status.innerHTML = "❌ ERREUR : Le mail envoyé est vide. Envoyez-le DEPUIS LE JEU.";
+            status.style.color = "red";
+            return;
+        }
+
         if (p1 !== p2 || p1.length < 6) { alert("Vérifiez vos mots de passe."); return; }
 
-        btn.disabled = true;
         status.style.display = "block";
-        status.style.background = "#222";
-        status.innerHTML = "⏳ Connexion aux serveurs PlayFab...";
+        status.innerHTML = "⏳ Connexion à PlayFab...";
 
         try {
-            // L'API CLIENT OFFICIELLE
             const response = await fetch(`https://${TID.toLowerCase()}.playfabapi.com/Client/ResetPassword`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ TitleId: TID, Token: t, Password: p1 })
+                body: JSON.stringify({ TitleId: TID, Token: token, Password: p1 })
             });
 
             const data = await response.json();
 
             if (data.code === 200) {
-                document.getElementById("form-ui").style.display = "none";
+                document.getElementById("ui").style.display = "none";
                 status.style.background = "#064e3b";
                 status.style.color = "#4ade80";
-                status.innerHTML = "✅ SUCCÈS !<br>Votre mot de passe a été modifié.<br>Retournez au jeu.";
+                status.innerHTML = "✅ SUCCÈS ! Votre mot de passe est modifié.";
             } else {
                 status.style.background = "#7f1d1d";
-                status.style.color = "#f87171";
                 status.innerHTML = "❌ ERREUR : " + (data.errorMessage || "Lien expiré");
-                btn.disabled = false;
             }
         } catch (e) {
-            status.style.background = "#7c2d12";
-            status.style.color = "#fbbf24";
-            status.innerHTML = "❌ ERREUR RÉSEAU.<br>Désactivez AdBlock ou testez en 4G sur téléphone.";
-            btn.disabled = false;
+            status.innerHTML = "❌ ERREUR RÉSEAU.";
         }
     }
 </script>
