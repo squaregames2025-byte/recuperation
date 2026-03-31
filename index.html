@@ -100,12 +100,13 @@ async function resetPassword() {
 
   try {
 
-    const response = await fetch("https://104EA2.playfabapi.com/Client/ResetPassword", {
+const response = await fetch("https://104EA2.playfabapi.com/Client/ResetPassword", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
+        TitleId: "104EA2", // <--- AJOUTE CETTE LIGNE OBLIGATOIRE
         Token: token,
         Password: p1
       })
