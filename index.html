@@ -9,7 +9,8 @@
         h2 { color: #ffaa00; text-transform: uppercase; margin-bottom: 20px; }
         input { padding: 14px; width: 100%; box-sizing: border-box; margin: 10px 0; border-radius: 6px; border: 1px solid #333; background: #000; color: #fff; font-size: 16px; }
         button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 8px; margin-top: 20px; cursor: pointer; }
-        #status { margin-top: 25px; font-weight: bold; padding: 10px; border-radius: 6px; }
+        #status { margin-top: 25px; font-weight: bold; font-size: 14px; padding: 10px; border-radius: 6px; }
+        .log-box { margin-top: 15px; font-size: 10px; color: #666; text-align: left; border-top: 1px solid #222; padding-top: 10px; font-family: monospace; }
     </style>
 </head>
 <body>
@@ -19,62 +20,69 @@
             <p>Définissez votre nouveau mot de passe :</p>
             <input type="password" id="p1" placeholder="Nouveau mot de passe">
             <input type="password" id="p2" placeholder="Confirmer le mot de passe">
-            <button onclick="validerReset()">VALIDER LE CHANGEMENT</button>
+            <button id="btnValider">VALIDER LE CHANGEMENT</button>
         </div>
         <div id="status"></div>
+        <div id="log" class="log-box">Prêt...</div>
     </div>
 
 <script>
-    async function validerReset() {
-        const status = document.getElementById("status");
-        status.style.display = "block";
-        status.style.color = "white";
-        status.innerHTML = "⏳ Bouton cliqué, traitement en cours...";
+    const log = (m) => document.getElementById("log").innerHTML += "<br>> " + m;
 
-        const TID = "104EA2";
+    document.getElementById("btnValider").onclick = async function() {
+        const titleId = "104EA2";
+        const status = document.getElementById("status");
+        
+        // 1. Récupération des infos
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');
         const p1 = document.getElementById("p1").value;
         const p2 = document.getElementById("p2").value;
 
-        if (!token) { 
-            status.innerHTML = "❌ Erreur : Token absent de l'URL."; 
-            return; 
-        }
-        if (p1 !== p2 || p1.length < 6) { 
-            status.innerHTML = "❌ Les mots de passe ne correspondent pas ou sont trop courts."; 
-            return; 
-        }
+        log("Début du processus...");
+        status.style.display = "block";
+        status.style.color = "yellow";
+        status.innerHTML = "⏳ Analyse des données...";
+
+        if (!token) { alert("ERREUR : Token manquant dans l'URL !"); return; }
+        if (p1 !== p2 || p1.length < 6) { alert("Les mots de passe ne correspondent pas."); return; }
+
+        status.innerHTML = "⏳ Envoi à PlayFab...";
+        log("Envoi de la requête à : https://" + titleId.toLowerCase() + ".playfabapi.com");
 
         try {
-            const apiUrl = `https://${TID.toLowerCase()}.playfabapi.com/Client/ResetPassword`;
-            
-            const response = await fetch(apiUrl, {
+            // 2. Appel API
+            const response = await fetch(`https://${titleId.toLowerCase()}.playfabapi.com/Client/ResetPassword`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    TitleId: TID,
                     Token: token,
                     Password: p1
                 })
             });
 
-            const data = await response.json();
+            log("Réponse reçue (Code: " + response.status + ")");
+            const text = await response.text();
+            const data = JSON.parse(text);
 
             if (data.code === 200) {
                 document.getElementById("ui").style.display = "none";
-                status.innerHTML = "✅ SUCCÈS ! Votre mot de passe a été modifié.";
+                status.innerHTML = "✅ SUCCÈS ! Votre mot de passe est changé.";
                 status.style.color = "#00ff00";
+                log("Terminé avec succès.");
             } else {
-                status.innerHTML = "❌ ERREUR PLAYFAB : " + (data.errorMessage || "Lien expiré");
+                status.innerHTML = "❌ ÉCHEC : " + (data.errorMessage || "Lien expiré");
                 status.style.color = "red";
+                log("Erreur PlayFab : " + text);
             }
-        } catch (e) {
-            status.innerHTML = "❌ ERREUR RÉSEAU : Votre navigateur ou un bloqueur empêche la connexion à PlayFab.";
+
+        } catch (err) {
+            log("ERREUR CRITIQUE : " + err.message);
+            status.innerHTML = "❌ ERREUR RÉSEAU / CORS";
             status.style.color = "red";
-            console.error(e);
+            alert("Une erreur réseau est survenue. Vérifiez la console F12.");
         }
-    }
+    };
 </script>
 </body>
 </html>
