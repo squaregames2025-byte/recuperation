@@ -3,14 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <title>The Lost Beacon - Password Reset</title>
+    <!-- Chargement du moteur officiel PlayFab -->
+    <script src="https://download.playfab.com/PlayFabClientApi.js"></script>
     <style>
         body { font-family: sans-serif; background: #050505; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #111; border: 2px solid #ffaa00; border-radius: 12px; padding: 40px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
-        h2 { color: #ffaa00; text-transform: uppercase; margin-bottom: 30px; }
+        .card { background: #111; border: 2px solid #ffaa00; border-radius: 12px; padding: 40px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 0 50px #000; }
+        h2 { color: #ffaa00; text-transform: uppercase; margin-bottom: 30px; letter-spacing: 2px; }
         input { padding: 14px; width: 100%; box-sizing: border-box; margin: 10px 0; border-radius: 6px; border: 1px solid #333; background: #000; color: #fff; font-size: 16px; outline: none; }
-        button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 8px; margin-top: 20px; cursor: pointer; text-transform: uppercase; width: 100%; transition: 0.3s; }
-        button:hover { background: #ffcc00; transform: scale(1.02); }
-        button:disabled { background: #444; cursor: not-allowed; }
+        input:focus { border-color: #ffaa00; }
+        button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 8px; margin-top: 20px; cursor: pointer; text-transform: uppercase; width: 100%; }
+        button:disabled { background: #444; }
         #status { margin-top: 25px; font-weight: bold; font-size: 15px; padding: 15px; border-radius: 6px; }
     </style>
 </head>
@@ -18,64 +20,56 @@
     <div class="card">
         <h2>The Lost Beacon</h2>
         <div id="form-ui">
-            <p>Définissez votre nouveau mot de passe :</p>
-            <input type="password" id="p1" placeholder="Mot de passe">
+            <p id="greeting">Réinitialisation du compte</p>
+            <input type="password" id="p1" placeholder="Nouveau mot de passe">
             <input type="password" id="p2" placeholder="Confirmer">
-            <button id="btn" onclick="send()">MODIFIER LE MOT DE PASSE</button>
+            <button id="btn" onclick="executeReset()">VALIDER</button>
         </div>
         <div id="status" style="display:none;"></div>
     </div>
 
 <script>
-    const TID = "104EA2";
+    // INITIALISATION OFFICIELLE
+    PlayFab.settings.titleId = "104EA2";
+
     const params = new URLSearchParams(window.location.search);
+    const u = params.get("u");
     const t = params.get("token");
 
-    async function send() {
+    if (u) document.getElementById("greeting").innerText = "Bonjour " + decodeURIComponent(u) + " !";
+
+    function executeReset() {
         const p1 = document.getElementById("p1").value;
         const p2 = document.getElementById("p2").value;
         const status = document.getElementById("status");
         const btn = document.getElementById("btn");
 
-        if (!t) { alert("Token manquant."); return; }
-        if (p1 !== p2 || p1.length < 6) { alert("Vérifiez vos mots de passe."); return; }
+        if (p1 !== p2 || p1.length < 6) { alert("Mots de passe non valides."); return; }
 
         btn.disabled = true;
         status.style.display = "block";
         status.style.background = "#222";
-        status.innerHTML = "⏳ Connexion à PlayFab...";
+        status.innerHTML = "⏳ Communication sécurisée avec PlayFab...";
 
-        try {
-            // --- LA CORRECTION FINALE : ConfirmPasswordReset ---
-            const response = await fetch(`https://${TID.toLowerCase()}.playfabapi.com/Client/ConfirmPasswordReset`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    TitleId: TID,
-                    Token: t,
-                    Password: p1
-                })
-            });
-
-            const data = await response.json();
-
-            if (data.code === 200) {
+        // --- APPEL API VIA SDK OFFICIEL (Plus robuste que fetch) ---
+        PlayFabClientAPI.ResetPassword({
+            Token: t,
+            Password: p1
+        }, function(result, error) {
+            if (result) {
+                // VICTOIRE
                 document.getElementById("form-ui").style.display = "none";
                 status.style.background = "#064e3b";
                 status.style.color = "#4ade80";
-                status.innerHTML = "✅ SUCCÈS !<br>Votre mot de passe a été modifié.";
+                status.innerHTML = "✅ SUCCÈS !<br>Votre mot de passe a été modifié.<br>Vous pouvez vous reconnecter en jeu.";
             } else {
+                // ERREUR SERVEUR
                 status.style.background = "#7f1d1d";
                 status.style.color = "#f87171";
-                status.innerHTML = "❌ ERREUR : " + (data.errorMessage || "Token expiré");
+                status.innerHTML = "❌ ERREUR : " + (error ? error.errorMessage : "Lien expiré");
                 btn.disabled = false;
             }
-        } catch (e) {
-            status.style.background = "#7c2d12";
-            status.style.color = "#fbbf24";
-            status.innerHTML = "❌ ERREUR RÉSEAU :<br>Veuillez essayer en <b>Navigation Privée</b> ou sur votre <b>TÉLÉPHONE (4G)</b>.";
-            btn.disabled = false;
-        }
+        });
     }
 </script>
 </body>
