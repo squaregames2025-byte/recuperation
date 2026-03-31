@@ -10,6 +10,7 @@
         input { padding: 14px; width: 100%; box-sizing: border-box; margin: 10px 0; border-radius: 6px; border: 1px solid #333; background: #000; color: #fff; font-size: 16px; }
         button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 8px; margin-top: 20px; cursor: pointer; }
         #status { margin-top: 25px; font-weight: bold; font-size: 15px; padding: 15px; border-radius: 6px; display: none; }
+        .debug-text { font-size: 12px; font-weight: normal; color: #aaa; margin-top: 10px; display: block; }
     </style>
 </head>
 <body>
@@ -44,30 +45,37 @@
 
         status.style.display = "block";
         status.innerHTML = "⏳ Connexion à PlayFab...";
+        status.style.color = "#ffaa00";
 
         try {
-            // Appel à l'API correcte : Client/ResetPassword
-            const response = await fetch(`https://${TID.toLowerCase()}.playfabapi.com/Client/ResetPassword`, {
+            console.log("Envoi de la requête à PlayFab...");
+            const response = await fetch(`https://${TID}.playfabapi.com/Client/ResetPassword`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json' 
+                },
                 body: JSON.stringify({
                     Token: token,
                     Password: p1
                 })
             });
 
+            console.log("Réponse reçue, traitement...");
             const data = await response.json();
 
             if (data.code === 200) {
                 document.getElementById("ui").style.display = "none";
-                status.innerHTML = "✅ SUCCÈS !<br>Votre mot de passe a été modifié. Vous pouvez retourner sur le jeu.";
+                status.innerHTML = "✅ SUCCÈS !<br>Votre mot de passe a été modifié.";
                 status.style.color = "#00ff00";
             } else {
-                status.innerHTML = "❌ ERREUR : " + (data.errorMessage || "Lien invalide ou expiré.");
+                status.innerHTML = "❌ ERREUR PLAYFAB : <br>" + (data.errorMessage || "Lien invalide ou expiré.");
                 status.style.color = "red";
             }
         } catch (e) {
-            status.innerHTML = "❌ ERREUR RÉSEAU. Vérifiez votre connexion internet.";
+            console.error("Détail de l'erreur réseau :", e);
+            status.innerHTML = `❌ ERREUR RÉSEAU<br>
+                <span class="debug-text">Détail technique : ${e.message}</span>
+                <span class="debug-text" style="color:#ffaa00;">💡 Solution : Désactivez votre bloqueur de pub (AdBlock, uBlock) ou essayez en navigation privée. Le navigateur bloque la connexion aux serveurs du jeu.</span>`;
             status.style.color = "red";
         }
     }
