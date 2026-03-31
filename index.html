@@ -2,80 +2,87 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>The Lost Beacon - Password Reset</title>
+    <title>The Lost Beacon - Reset</title>
     <style>
         body { font-family: sans-serif; background: #050505; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: #111; border: 2px solid #ffaa00; border-radius: 12px; padding: 40px; max-width: 400px; width: 90%; text-align: center; }
+        .card { background: #111; border: 2px solid #ffaa00; border-radius: 12px; padding: 40px; max-width: 400px; width: 90%; text-align: center; border: 1px solid #333; }
         h2 { color: #ffaa00; text-transform: uppercase; margin-bottom: 20px; }
         input { padding: 14px; width: 100%; box-sizing: border-box; margin: 10px 0; border-radius: 6px; border: 1px solid #333; background: #000; color: #fff; font-size: 16px; }
         button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 8px; margin-top: 20px; cursor: pointer; }
-        #status { margin-top: 25px; font-weight: bold; font-size: 15px; padding: 15px; border-radius: 6px; display: none; }
-        .debug-info { margin-top: 20px; font-size: 10px; color: #555; text-align: left; word-break: break-all; border-top: 1px solid #222; padding-top: 10px; }
+        #status { margin-top: 25px; font-weight: bold; padding: 10px; border-radius: 6px; display: none; }
+        .debug-box { margin-top: 20px; padding: 10px; background: #000; color: #0f0; font-family: monospace; font-size: 11px; text-align: left; border: 1px dashed #444; word-break: break-all; }
     </style>
 </head>
 <body>
     <div class="card">
         <h2>The Lost Beacon</h2>
         <div id="ui">
-            <p>Définissez votre nouveau mot de passe :</p>
-            <input type="password" id="p1" placeholder="Nouveau mot de passe">
-            <input type="password" id="p2" placeholder="Confirmer le mot de passe">
-            <button onclick="realReset()">VALIDER LE CHANGEMENT</button>
+            <p>Nouveau mot de passe :</p>
+            <input type="password" id="p1" placeholder="Minimum 6 caractères">
+            <input type="password" id="p2" placeholder="Confirmer">
+            <button onclick="sendToPlayFab()">VALIDER LE CHANGEMENT</button>
         </div>
         <div id="status"></div>
-        <div id="debug" class="debug-info"></div>
+        <div id="console" class="debug-box">Initialisation prête...</div>
     </div>
 
 <script>
-    async function realReset() {
-        // IMPORTANT : TitleId en MINUSCULES pour l'URL
-        const titleId = "104ea2"; 
-        
+    function log(msg) {
+        document.getElementById("console").innerHTML += "<br>> " + msg;
+        console.log(msg);
+    }
+
+    async function sendToPlayFab() {
+        const TITLE_ID = "104EA2";
         const params = new URLSearchParams(window.location.search);
         const token = params.get("token");
         const p1 = document.getElementById("p1").value;
         const p2 = document.getElementById("p2").value;
         const status = document.getElementById("status");
-        const debug = document.getElementById("debug");
 
-        if (!token) { alert("Token manquant dans l'URL ! Vérifiez votre mail."); return; }
-        if (p1 !== p2 || p1.length < 6) { alert("Les mots de passe doivent être identiques et faire 6 caractères min."); return; }
-
+        if (p1 !== p2 || p1.length < 6) { alert("Erreur de saisie."); return; }
+        
         status.style.display = "block";
         status.style.color = "#ffaa00";
-        status.innerHTML = "⏳ Connexion à PlayFab...";
-
-        // URL de l'API PlayFab
-        const apiUrl = `https://${titleId}.playfabapi.com/Client/ResetPassword`;
+        status.innerHTML = "⏳ Tentative de connexion...";
+        log("Démarrage de la requête...");
 
         try {
-            const response = await fetch(apiUrl, {
+            // URL forcée en minuscules (obligatoire pour PlayFab)
+            const url = `https://${TITLE_ID.toLowerCase()}.playfabapi.com/Client/ResetPassword`;
+            log("URL cible : " + url);
+
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    TitleId: titleId.toUpperCase(), // TitleId en MAJUSCULES ici
+                    TitleId: TITLE_ID,
                     Token: token,
                     Password: p1
                 })
             });
 
-            const responseText = await response.text();
-            let data;
-            try { data = JSON.parse(responseText); } catch(e) { data = {}; }
+            log("Réponse reçue (Code: " + response.status + ")");
 
-            if (response.ok && data.code === 200) {
+            const text = await response.text();
+            log("Contenu : " + text.substring(0, 100));
+
+            const data = JSON.parse(text);
+
+            if (data.code === 200) {
                 document.getElementById("ui").style.display = "none";
-                status.innerHTML = "✅ SUCCÈS !<br>Votre mot de passe a été modifié.";
+                status.innerHTML = "✅ MOT DE PASSE CHANGÉ !";
                 status.style.color = "#00ff00";
             } else {
-                status.innerHTML = "❌ ERREUR : " + (data.errorMessage || "Lien invalide ou expiré.");
+                status.innerHTML = "❌ ÉCHEC : " + (data.errorMessage || "Erreur inconnue");
                 status.style.color = "red";
-                debug.innerHTML = "Détail : " + responseText;
             }
-        } catch (e) {
-            status.innerHTML = "❌ ERREUR RÉSEAU";
+
+        } catch (err) {
+            log("ERREUR CRITIQUE : " + err.message);
+            status.innerHTML = "❌ ERREUR DE CONFIANCE (CORS / RESEAU)";
             status.style.color = "red";
-            debug.innerHTML = "Erreur technique : " + e.message;
+            status.innerHTML += "<br><small>Vérifiez les réglages API Features dans PlayFab.</small>";
         }
     }
 </script>
