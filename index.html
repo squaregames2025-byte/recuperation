@@ -10,7 +10,7 @@
         input { padding: 14px; width: 100%; box-sizing: border-box; margin: 10px 0; border-radius: 6px; border: 1px solid #333; background: #000; color: #fff; font-size: 16px; }
         button { padding: 16px; width: 100%; background: #ffaa00; border: none; color: #000; font-weight: bold; border-radius: 8px; margin-top: 20px; cursor: pointer; }
         #status { margin-top: 25px; font-weight: bold; font-size: 15px; padding: 15px; border-radius: 6px; display: none; }
-        .debug-area { margin-top: 20px; font-size: 11px; color: #666; text-align: left; border-top: 1px solid #222; padding-top: 10px; word-break: break-all; }
+        .debug-info { margin-top: 20px; font-size: 10px; color: #555; text-align: left; word-break: break-all; border-top: 1px solid #222; padding-top: 10px; }
     </style>
 </head>
 <body>
@@ -23,12 +23,14 @@
             <button onclick="realReset()">VALIDER LE CHANGEMENT</button>
         </div>
         <div id="status"></div>
-        <div id="debug" class="debug-area"></div>
+        <div id="debug" class="debug-info"></div>
     </div>
 
 <script>
     async function realReset() {
-        const titleId = "104ea2"; // FORCE MINUSCULES ICI
+        // IMPORTANT : TitleId en MINUSCULES pour l'URL
+        const titleId = "104ea2"; 
+        
         const params = new URLSearchParams(window.location.search);
         const token = params.get("token");
         const p1 = document.getElementById("p1").value;
@@ -36,54 +38,44 @@
         const status = document.getElementById("status");
         const debug = document.getElementById("debug");
 
-        if (!token) { alert("Token manquant dans l'URL."); return; }
-        if (p1 !== p2 || p1.length < 6) { alert("Les mots de passe doivent être identiques (min 6 caractères)."); return; }
+        if (!token) { alert("Token manquant dans l'URL ! Vérifiez votre mail."); return; }
+        if (p1 !== p2 || p1.length < 6) { alert("Les mots de passe doivent être identiques et faire 6 caractères min."); return; }
 
         status.style.display = "block";
         status.style.color = "#ffaa00";
         status.innerHTML = "⏳ Connexion à PlayFab...";
-        debug.innerHTML = "";
 
-        // URL strictement en minuscules pour éviter le 404
+        // URL de l'API PlayFab
         const apiUrl = `https://${titleId}.playfabapi.com/Client/ResetPassword`;
 
         try {
-            console.log("Appel de :", apiUrl);
-            
             const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    TitleId: titleId.toUpperCase(), // TitleId en MAJUSCULES ici
                     Token: token,
                     Password: p1
                 })
             });
 
-            // On récupère d'abord le texte brut pour éviter l'erreur "Unexpected end of JSON"
             const responseText = await response.text();
             let data;
-            
-            try {
-                data = JSON.parse(responseText);
-            } catch (e) {
-                // Si ce n'est pas du JSON, c'est une erreur serveur (404/500)
-                throw new Error(`Le serveur PlayFab a répondu avec une erreur (Code ${response.status}). Vérifiez votre TitleID.`);
-            }
+            try { data = JSON.parse(responseText); } catch(e) { data = {}; }
 
             if (response.ok && data.code === 200) {
                 document.getElementById("ui").style.display = "none";
                 status.innerHTML = "✅ SUCCÈS !<br>Votre mot de passe a été modifié.";
                 status.style.color = "#00ff00";
             } else {
-                status.innerHTML = "❌ ERREUR : " + (data.errorMessage || "Lien expiré");
+                status.innerHTML = "❌ ERREUR : " + (data.errorMessage || "Lien invalide ou expiré.");
                 status.style.color = "red";
-                debug.innerHTML = "Détail : " + JSON.stringify(data);
+                debug.innerHTML = "Détail : " + responseText;
             }
-
         } catch (e) {
-            status.innerHTML = "❌ ERREUR DE CONNEXION";
+            status.innerHTML = "❌ ERREUR RÉSEAU";
             status.style.color = "red";
-            debug.innerHTML = "<b>Cause :</b> " + e.message + "<br><b>URL :</b> " + apiUrl;
+            debug.innerHTML = "Erreur technique : " + e.message;
         }
     }
 </script>
